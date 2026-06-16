@@ -2,6 +2,10 @@ package BackEnd;
 
 public class Main {
     public static void main(String[] args) {
+
+
+
+        /*
         BorrowRecordList.addBorrowRecord(1, 1001, "Ahmad", "2026-06-07", "2026-06-14");
         BorrowRecordList.addBorrowRecord(2, 1002, "Sara", "2026-06-07", "2026-06-15");
         BorrowRecordList.addBorrowRecord(3, 1003, "Ahmad", "2026-06-08", "2026-06-16");
@@ -69,6 +73,6 @@ public class Main {
         }
 
         System.out.println("\nAll waiting requests after serving:");
-        BookWaitingQueue.printAllRequests();
+        BookWaitingQueue.printAllRequests();*/
     }
 }

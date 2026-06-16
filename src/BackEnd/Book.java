@@ -12,6 +12,54 @@ public class Book {
         this.bookNumber = bookNumber;
         this.copiesNumber = copiesNumber;
         this.height = height;
-        author = author;
+        this.author = author;
+    }
+
+    public int getBookNumber() {
+        return bookNumber;
+    }
+
+    public void setBookNumber(int bookNumber) {
+        this.bookNumber += bookNumber;
+    }
+
+    public int getCopiesNumber() {
+        return copiesNumber;
+    }
+
+    public void setCopiesNumber(int copiesNumber) {
+        this.copiesNumber = copiesNumber;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public Book getLChild() {
+        return LChild;
+    }
+
+    public void setLChild(Book LChild) {
+        this.LChild = LChild;
+    }
+
+    public Book getRChild() {
+        return RChild;
+    }
+
+    public void setRChild(Book RChild) {
+        this.RChild = RChild;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
     }
 }

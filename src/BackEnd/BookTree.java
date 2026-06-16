@@ -4,6 +4,8 @@ import static java.lang.Math.max;
 
 public class BookTree {
     static private Book Root = null;
+    static public int allBook = 0;
+
 
     public static Book search(int number) {
         return search(Root, number);
@@ -60,6 +62,7 @@ public class BookTree {
     }
 
     public static void insert(int number, int copies, String auth) {
+        allBook++;
         Root = insert(Root, number, copies, auth);
     }
 
@@ -105,6 +108,31 @@ public class BookTree {
         while (cur.LChild != null)
             cur = cur.LChild;
         return cur;
+    }
+
+    String addCopies(int bookNumber, int copies) {
+        Book b = search(bookNumber);
+        if (b == null) {
+            return "There is no book with this number .";
+        }
+        b.setCopiesNumber(+copies);
+        return "Done .";
+    }
+
+    String deleteCopies(int bookNumber, int copies) {
+        Book b = search(bookNumber);
+        if (b == null) {
+            return "There is no book with this number .";
+        }
+        if (b.getCopiesNumber() < copies) {
+            return "Not enough copies to delete .";
+        } else if (b.getCopiesNumber() == copies) {
+            delete(bookNumber);
+            return "Done .";
+        } else {
+            b.setCopiesNumber(-copies);
+            return "Done .";
+        }
     }
 
     public static void delete(int number) {

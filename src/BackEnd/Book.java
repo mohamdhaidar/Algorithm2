@@ -3,16 +3,27 @@ package BackEnd;
 public class Book {
     int bookNumber;
     int copiesNumber;
+    int borrowedCopies;
     int height;
     Book LChild;
     Book RChild;
     String author;
+
 
     public Book(int bookNumber, int copiesNumber, int height, String author) {
         this.bookNumber = bookNumber;
         this.copiesNumber = copiesNumber;
         this.height = height;
         this.author = author;
+        this.borrowedCopies = 0;
+    }
+
+    public int getBorrowedCopies() {
+        return borrowedCopies;
+    }
+
+    public void setBorrowedCopies(int borrowedCopies) {
+        this.borrowedCopies = borrowedCopies;
     }
 
     public int getBookNumber() {

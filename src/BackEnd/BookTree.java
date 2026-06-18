@@ -61,9 +61,13 @@ public class BookTree {
         return b2;
     }
 
-    public static void insert(int number, int copies, String auth) {
+    //اضافة كتاب جديد وارجاع النتيجة ( موجود مسبقا \ تمت العملية بنجاح )
+    public static String insert(int number, int copies, String auth) {
+        if (search(number) != null)
+            return "The book already exists .";
         allBook++;
         Root = insert(Root, number, copies, auth);
+        return "Done .";
     }
 
     private static Book insert(Book cur, int number, int copies, String auth) {
@@ -110,7 +114,8 @@ public class BookTree {
         return cur;
     }
 
-    String addCopies(int bookNumber, int copies) {
+    //اضافة نسخ جديدة وارجاع النتيجة ( غير موجود الكتاب \ تمت العملية بنجاح )
+    public static String addCopies(int bookNumber, int copies) {
         Book b = search(bookNumber);
         if (b == null) {
             return "There is no book with this number .";
@@ -119,24 +124,34 @@ public class BookTree {
         return "Done .";
     }
 
-    String deleteCopies(int bookNumber, int copies) {
+    //حذف نسخ من الكتاب وارجاع النتيجة ( غير موجود الكتاب \ لايوجد نسخ متوفرة للحذف \ تمت العملية بنجاح )
+    public static String deleteCopies(int bookNumber, int copies) {
         Book b = search(bookNumber);
         if (b == null) {
             return "There is no book with this number .";
         }
-        if (b.getCopiesNumber() < copies) {
+        if (b.getCopiesNumber() - b.getBorrowedCopies() < copies) {
             return "Not enough copies to delete .";
-        } else if (b.getCopiesNumber() == copies) {
-            delete(bookNumber);
-            return "Done .";
+        } else if (b.getCopiesNumber() - b.getBorrowedCopies() == copies && b.getBorrowedCopies() == 0) {
+            return delete(bookNumber);
         } else {
             b.setCopiesNumber(-copies);
             return "Done .";
         }
     }
 
-    public static void delete(int number) {
+    // حذف كتاب وارجاع النتيجة ( تمت العملية بنجاح \ الكتاب غير موجود \ لا يمكن الحذف لان هناك نسخ مستعارة )
+    public static String delete(int number) {
+        Book cur = search(number);
+        if (cur == null) {
+            return "The book doesn't exist .";
+        }
+        if (cur.borrowedCopies != 0) {
+            return "The book cannot be deleted because there are borrowed copies.";
+        }
         Root = delete(Root, number);
+        allBook--;
+        return "Done .";
     }
 
     private static Book delete(Book cur, int number) {

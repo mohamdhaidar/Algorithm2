@@ -2,8 +2,8 @@ package BackEnd;
 
 public class Book {
     int bookNumber;
-    int copiesNumber;
-    int borrowedCopies;
+    int copiesNumber; // عدد النسخ كافة
+    int borrowedCopies; //عدد النسخ المستعارة
     int height;
     Book LChild;
     Book RChild;
@@ -23,7 +23,7 @@ public class Book {
     }
 
     public void setBorrowedCopies(int borrowedCopies) {
-        this.borrowedCopies = borrowedCopies;
+        this.borrowedCopies += borrowedCopies;
     }
 
     public int getBookNumber() {

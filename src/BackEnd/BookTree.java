@@ -6,7 +6,7 @@ public class BookTree {
     static private Book Root = null;
     static public int allBook = 0;
 
-
+    //  البحث عن كتاب في الشجرة وارجاعه
     public static Book search(int number) {
         return search(Root, number);
     }
@@ -22,6 +22,7 @@ public class BookTree {
             return search(cur.LChild, number);
     }
 
+    // يرجع ارتفاع الكتاب في الشجرة
     private static int getHeight(Book b) {
         if (b == null) return 0;
         return b.height;
@@ -107,6 +108,7 @@ public class BookTree {
         return cur;
     }
 
+    // يرجع اقل قيمة لكتاب في الشجرة
     private static Book minValue(Book b) {
         Book cur = b;
         while (cur.LChild != null)
@@ -205,7 +207,28 @@ public class BookTree {
             cur.RChild = rightRotate(cur.RChild);
             return leftRotate(cur);
         }
-
         return cur;
     }
+
+    // استعارة كتاب
+    public static String BorrowBook(int number) {
+        Book b = search(number);
+        if (b == null) return "The book doesn't exist .";
+
+        if (b.getCopiesNumber() - b.getBorrowedCopies() == 0)
+            return "There is no copy to borrow .";
+        else {
+            b.setBorrowedCopies(+1);
+            return "Done .";
+        }
+    }
+
+    // ارجاع كتاب مستعار
+    public static String returnBook(int number) {
+        Book b = search(number);
+        if (b == null) return "The book doesn't exist .";
+        b.setBorrowedCopies(-1);
+        return "Done .";
+    }
+
 }

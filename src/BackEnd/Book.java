@@ -20,7 +20,7 @@ public class Book {
     }
 
     public void setBookNumber(int bookNumber) {
-        this.bookNumber += bookNumber;
+        this.bookNumber = bookNumber;
     }
 
     public int getCopiesNumber() {
@@ -28,7 +28,7 @@ public class Book {
     }
 
     public void setCopiesNumber(int copiesNumber) {
-        this.copiesNumber = copiesNumber;
+        this.copiesNumber += copiesNumber;
     }
 
     public int getHeight() {

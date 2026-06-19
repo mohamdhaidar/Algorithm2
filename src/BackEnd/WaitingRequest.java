@@ -18,6 +18,26 @@ public class WaitingRequest {
         this.next = null;
     }
 
+    public int getRequestId() {
+        return requestId;
+    }
+
+    public int getBookNumber() {
+        return bookNumber;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public boolean isGraduatingStudent() {
+        return graduatingStudent;
+    }
+
+    public String getRequestDate() {
+        return requestDate;
+    }
+
     @Override
     public String toString() {
         return "Request ID: " + requestId +

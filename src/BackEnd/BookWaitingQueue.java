@@ -1,25 +1,27 @@
 package BackEnd;
 
+import java.util.ArrayList;
+
 public class BookWaitingQueue {
     private static WaitingRequest front = null;
 
-    public static void addRequest(int requestId, int bookNumber, String studentName, boolean graduatingStudent, String requestDate) {
+    public static String addRequest(int requestId, int bookNumber, String studentName, boolean graduatingStudent, String requestDate) {
         if (searchByRequestId(requestId) != null) {
             System.out.println("Waiting request already exists.");
-            return;
+            return "Waiting request already exists.";
         }
 
         WaitingRequest newRequest = new WaitingRequest(requestId, bookNumber, studentName, graduatingStudent, requestDate);
 
         if (front == null) {
             front = newRequest;
-            return;
+            return "Done.";
         }
 
         if (newRequest.graduatingStudent && !front.graduatingStudent) {
             newRequest.next = front;
             front = newRequest;
-            return;
+            return "Done.";
         }
 
         WaitingRequest cur = front;
@@ -34,6 +36,7 @@ public class BookWaitingQueue {
 
         newRequest.next = cur.next;
         cur.next = newRequest;
+        return "Done.";
     }
 
     public static WaitingRequest peekNextRequest(int bookNumber) {
@@ -92,35 +95,31 @@ public class BookWaitingQueue {
         return null;
     }
 
-    public static void printAllRequests() {
-        if (front == null) {
-            System.out.println("There are no waiting requests.");
-            return;
-        }
-
+    public static ArrayList<WaitingRequest> getAllRequests() {
+        ArrayList<WaitingRequest> requests = new ArrayList<>();
         WaitingRequest cur = front;
 
         while (cur != null) {
-            System.out.println(cur);
+            requests.add(cur);
             cur = cur.next;
         }
+
+        return requests;
     }
 
-    public static void printRequestsByBookNumber(int bookNumber) {
+    public static ArrayList<WaitingRequest> getRequestsByBookNumber(int bookNumber) {
+        ArrayList<WaitingRequest> requests = new ArrayList<>();
         WaitingRequest cur = front;
-        boolean found = false;
 
         while (cur != null) {
             if (cur.bookNumber == bookNumber) {
-                System.out.println(cur);
-                found = true;
+                requests.add(cur);
             }
 
             cur = cur.next;
         }
 
-        if (!found) {
-            System.out.println("There are no waiting requests for this book.");
-        }
+        return requests;
     }
+
 }

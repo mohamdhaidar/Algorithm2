@@ -19,6 +19,30 @@ public class BorrowRecord {
         this.next = null;
     }
 
+    public int getRecordId() {
+        return recordId;
+    }
+
+    public int getBookNumber() {
+        return bookNumber;
+    }
+
+    public String getBorrowerName() {
+        return borrowerName;
+    }
+
+    public String getBorrowDate() {
+        return borrowDate;
+    }
+
+    public String getExpectedReturnDate() {
+        return expectedReturnDate;
+    }
+
+    public boolean isReturned() {
+        return returned;
+    }
+
     @Override
     public String toString() {
         return "Record ID: " + recordId +

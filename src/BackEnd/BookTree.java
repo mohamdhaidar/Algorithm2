@@ -1,10 +1,17 @@
 package BackEnd;
 
+import java.util.ArrayList;
+
 import static java.lang.Math.max;
 
 public class BookTree {
     static private Book Root = null;
     static public int allBook = 0;
+    static public ArrayList<Book> Books = new ArrayList<>();
+
+    public static ArrayList<Book> getBooks() {
+        return Books;
+    }
 
     //  البحث عن كتاب في الشجرة وارجاعه
     public static Book search(int number) {
@@ -74,6 +81,7 @@ public class BookTree {
     private static Book insert(Book cur, int number, int copies, String auth) {
         if (cur == null) {
             cur = new Book(number, copies, 1, auth);
+            Books.add(cur);
             return cur;
         }
 
@@ -151,6 +159,7 @@ public class BookTree {
         if (cur.borrowedCopies != 0) {
             return "The book cannot be deleted because there are borrowed copies.";
         }
+        Books.removeIf(Book -> Book.bookNumber == number);
         Root = delete(Root, number);
         allBook--;
         return "Done .";

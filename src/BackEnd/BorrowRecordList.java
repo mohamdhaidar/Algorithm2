@@ -7,6 +7,26 @@ public class BorrowRecordList {
     private static final int MAX_BORROW_LIMIT = 3;
 
     public static String addBorrowRecord(int recordId, int bookNumber, String borrowerName, String borrowDate, String expectedReturnDate) {
+        if (recordId <= 0) {
+            return "Record ID must be greater than 0.";
+        }
+
+        if (bookNumber <= 0) {
+            return "Book number must be greater than 0.";
+        }
+
+        if (borrowerName == null || borrowerName.trim().isEmpty()) {
+            return "Borrower name is required.";
+        }
+
+        if (borrowDate == null || borrowDate.trim().isEmpty()) {
+            return "Borrow date is required.";
+        }
+
+        if (expectedReturnDate == null || expectedReturnDate.trim().isEmpty()) {
+            return "Expected return date is required.";
+        }
+
         if (searchByRecordId(recordId) != null) {
             return "Borrow record already exists.";
         }
@@ -15,7 +35,7 @@ public class BorrowRecordList {
 
         if (head == null) {
             head = newRecord;
-            return "Done";
+            return "Done.";
         }
 
         BorrowRecord cur = head;
@@ -25,7 +45,7 @@ public class BorrowRecordList {
         }
 
         cur.next = newRecord;
-        return "Done";
+        return "Done.";
     }
 
     public static BorrowRecord searchByRecordId(int recordId) {
@@ -72,6 +92,10 @@ public class BorrowRecordList {
     public static String returnBorrowedBook(int recordId) {
         BorrowRecord record = searchByRecordId(recordId);
 
+        if (recordId <= 0) {
+            return "Record ID must be greater than 0.";
+        }
+
         if (record == null) {
             return "Borrow record not found.";
         }
@@ -82,7 +106,7 @@ public class BorrowRecordList {
 
         String result = BookTree.returnBook(record.bookNumber);
 
-        if (!result.equals("Done.")) {
+        if (!"Done.".equals(result)) {
             return result;
         }
 
@@ -114,7 +138,12 @@ public class BorrowRecordList {
             return "Borrowing failed. The borrower has reached the maximum borrow limit.";
         }
 
-        addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
+        String result = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
+
+        if (!"Done.".equals(result)) {
+            return result;
+        }
+
         return "Borrow record added successfully.";
     }
 
@@ -301,11 +330,19 @@ public class BorrowRecordList {
 
         String borrowResult = BookTree.BorrowBook(bookNumber);
 
-        if (!borrowResult.equals("Done.")) {
+        if (!"Done.".equals(borrowResult)) {
             return borrowResult;
         }
 
-        return addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
+        String addRecordResult = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
+
+        if (!"Done.".equals(addRecordResult)) {
+            BookTree.returnBook(bookNumber);
+            return addRecordResult;
+        }
+
+        return "Done.";
+
     }
 
 }

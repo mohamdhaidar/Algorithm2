@@ -190,6 +190,7 @@ public class BookTree {
                 cur.bookNumber = temp.bookNumber;
                 cur.copiesNumber = temp.copiesNumber;
                 cur.author = temp.author;
+                cur.borrowedCopies = temp.borrowedCopies;
 
                 cur.RChild = delete(cur.RChild, temp.bookNumber);
             }

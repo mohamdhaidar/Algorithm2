@@ -18,6 +18,18 @@ public class Book {
         this.borrowedCopies = 0;
     }
 
+    public int getAvailableCopies() {
+        return getCopiesNumber() - getBorrowedCopies();
+    }
+
+    // تقرير من اجل النسخ المتاحة من كل كتاب
+    public String AvailableBookCopies() {
+        return "Book Number: " + getBookNumber() +
+                " | Author: " + getAuthor() +
+                " | Total Copies: " + getCopiesNumber() +
+                " | Available Copies: " + getAvailableCopies();
+    }
+
     public int getBorrowedCopies() {
         return borrowedCopies;
     }

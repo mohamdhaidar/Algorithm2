@@ -71,6 +71,10 @@ public class BookTree {
 
     //اضافة كتاب جديد وارجاع النتيجة ( موجود مسبقا \ تمت العملية بنجاح )
     public static String insert(int number, int copies, String auth) {
+        if (number <= 0) return "The Book number must be positive .";
+        if (copies <= 0) return "The copies must be positive .";
+        if (auth == null) return "Author field required .";
+
         if (search(number) != null)
             return "The book already exists .";
         allBook++;
@@ -126,6 +130,9 @@ public class BookTree {
 
     //اضافة نسخ جديدة وارجاع النتيجة ( غير موجود الكتاب \ تمت العملية بنجاح )
     public static String addCopies(int bookNumber, int copies) {
+        if (bookNumber <= 0) return "The Book number must be positive .";
+        if (copies <= 0) return "The copies must be positive .";
+
         Book b = search(bookNumber);
         if (b == null) {
             return "There is no book with this number .";
@@ -136,6 +143,9 @@ public class BookTree {
 
     //حذف نسخ من الكتاب وارجاع النتيجة ( غير موجود الكتاب \ لايوجد نسخ متوفرة للحذف \ تمت العملية بنجاح )
     public static String deleteCopies(int bookNumber, int copies) {
+        if (bookNumber <= 0) return "The Book number must be positive .";
+        if (copies <= 0) return "The copies must be positive .";
+
         Book b = search(bookNumber);
         if (b == null) {
             return "There is no book with this number .";
@@ -152,6 +162,8 @@ public class BookTree {
 
     // حذف كتاب وارجاع النتيجة ( تمت العملية بنجاح \ الكتاب غير موجود \ لا يمكن الحذف لان هناك نسخ مستعارة )
     public static String delete(int number) {
+        if (number <= 0) return "The Book number must be positive .";
+
         Book cur = search(number);
         if (cur == null) {
             return "The book doesn't exist .";
@@ -222,6 +234,8 @@ public class BookTree {
 
     // استعارة كتاب
     public static String BorrowBook(int number) {
+        if (number <= 0) return "The Book number must be positive .";
+
         Book b = search(number);
         if (b == null) return "The book doesn't exist .";
 
@@ -235,6 +249,8 @@ public class BookTree {
 
     // ارجاع كتاب مستعار
     public static String returnBook(int number) {
+        if (number <= 0) return "The Book number must be positive .";
+
         Book b = search(number);
         if (b == null) return "The book doesn't exist .";
         b.setBorrowedCopies(-1);

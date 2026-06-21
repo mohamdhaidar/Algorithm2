@@ -73,7 +73,8 @@ public class BookTree {
     public static String insert(int number, int copies, String auth) {
         if (number <= 0) return "The Book number must be positive .";
         if (copies <= 0) return "The copies must be positive .";
-        if (auth == null) return "Author field required .";
+        if (auth.isEmpty()) return "Author field required .";
+        System.out.println("here");
 
         if (search(number) != null)
             return "The book already exists .";

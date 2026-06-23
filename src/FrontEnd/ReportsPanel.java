@@ -2,6 +2,7 @@ package FrontEnd;
 
 import BackEnd.BookTree;
 import BackEnd.BorrowRecordList;
+import BackEnd.Book;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -109,8 +110,26 @@ public class ReportsPanel extends JPanel {
     }
 
     private void showAvailableBooksReport() {
-        String report = "just a line from me until my friend makes this ";
-        reportTextArea.setText(formatReportTitle("Available Books Report") + report);
+        StringBuilder report = new StringBuilder();
+        int totalAvailableCopies = 0;
+
+        for (Book book : BookTree.getBooks()) {
+            if (book.getAvailableCopies() > 0) {
+                report.append(book.AvailableBookCopies()).append("\n");
+                totalAvailableCopies += book.getAvailableCopies();
+            }
+        }
+
+        if (report.length() == 0) {
+            report.append("There are currently no available copies.");
+        } else {
+            report.append("\nTotal Available Copies: ")
+                    .append(totalAvailableCopies);
+        }
+
+        reportTextArea.setText(
+                formatReportTitle("Available Books Report") + report
+        );
     }
 
     private void showMostBorrowedBooksReport() {

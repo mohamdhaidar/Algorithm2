@@ -35,7 +35,7 @@ public class BorrowRecordList {
 
         if (head == null) {
             head = newRecord;
-            return "Done.";
+            return "Done .";
         }
 
         BorrowRecord cur = head;
@@ -45,7 +45,7 @@ public class BorrowRecordList {
         }
 
         cur.next = newRecord;
-        return "Done.";
+        return "Done .";
     }
 
     public static BorrowRecord searchByRecordId(int recordId) {
@@ -106,12 +106,12 @@ public class BorrowRecordList {
 
         String result = BookTree.returnBook(record.bookNumber);
 
-        if (!"Done.".equals(result)) {
+        if (!"Done .".equals(result)) {
             return result;
         }
 
         record.returned = true;
-        return "Done.";
+        return "Done .";
     }
 
     public static int countActiveBorrowRecords(String borrowerName) {
@@ -140,7 +140,7 @@ public class BorrowRecordList {
 
         String result = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
 
-        if (!"Done.".equals(result)) {
+        if (!"Done .".equals(result)) {
             return result;
         }
 
@@ -330,18 +330,18 @@ public class BorrowRecordList {
 
         String borrowResult = BookTree.BorrowBook(bookNumber);
 
-        if (!"Done.".equals(borrowResult)) {
+        if (!"Done .".equals(borrowResult)) {
             return borrowResult;
         }
 
         String addRecordResult = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
 
-        if (!"Done.".equals(addRecordResult)) {
+        if (!"Done .".equals(addRecordResult)) {
             BookTree.returnBook(bookNumber);
             return addRecordResult;
         }
 
-        return "Done.";
+        return "Done .";
 
     }
 

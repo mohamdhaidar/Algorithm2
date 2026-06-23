@@ -20,6 +20,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.util.ArrayList;
+import javax.swing.JOptionPane;
 
 public class WaitingQueuePanel extends JPanel {
 
@@ -145,7 +146,7 @@ public class WaitingQueuePanel extends JPanel {
         addFormRow(formPanel, gbc, 4, "Request Date", requestDateField);
 
         gbc.gridx = 0;
-        gbc.gridy = 10;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         formPanel.add(graduatingStudentCheckBox, gbc);
 
@@ -160,18 +161,18 @@ public class WaitingQueuePanel extends JPanel {
         gbc.gridwidth = 1;
 
         gbc.gridx = 0;
-        gbc.gridy = row * 2;
-        gbc.weightx = 1;
+        gbc.gridy = row;
+        gbc.weightx = 0;
         panel.add(label, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = row * 2 + 1;
+        gbc.gridx = 1;
+        gbc.gridy = row;
         gbc.weightx = 1;
         panel.add(field, gbc);
     }
 
     private JPanel createButtonsPanel() {
-        JPanel buttonsPanel = new JPanel(new GridLayout(6, 1, 0, 10));
+        JPanel buttonsPanel = new JPanel(new GridLayout(3, 2, 10, 10));
         buttonsPanel.setOpaque(false);
 
         JButton addRequestButton = UIHelper.createPrimaryButton("Add Request");
@@ -206,12 +207,7 @@ public class WaitingQueuePanel extends JPanel {
             String requestDate = readTextField(requestDateField, "Request Date");
             boolean graduatingStudent = graduatingStudentCheckBox.isSelected();
 
-            if (BookWaitingQueue.searchByRequestId(requestId) != null) {
-                UIHelper.showErrorMessage(this, "Waiting request already exists.");
-                return;
-            }
-
-            BookWaitingQueue.addRequest(
+            String message = BookWaitingQueue.addRequest(
                     requestId,
                     bookNumber,
                     studentName,
@@ -219,15 +215,22 @@ public class WaitingQueuePanel extends JPanel {
                     requestDate
             );
 
-            UIHelper.showSuccessMessage(this, "Waiting request added successfully.");
-            refreshRequestsTable();
-            clearFields();
+            if ("Done .".equals(message)) {
+                UIHelper.showSuccessMessage(
+                        this,
+                        "Waiting request added successfully."
+                );
+
+                refreshRequestsTable();
+                clearFields();
+            } else {
+                UIHelper.showErrorMessage(this, message);
+            }
 
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
         }
     }
-
     private void showRequestsByBook() {
         try {
             int bookNumber = readIntegerField(bookNumberField, "Book Number");
@@ -274,29 +277,80 @@ public class WaitingQueuePanel extends JPanel {
         try {
             int bookNumber = readIntegerField(bookNumberField, "Book Number");
 
+            String validationMessage =
+                    BookWaitingQueue.validateServeNextRequest(bookNumber);
+
+            if (!"Done .".equals(validationMessage)) {
+                UIHelper.showErrorMessage(this, validationMessage);
+                return;
+            }
+
+            WaitingRequest nextRequest =
+                    BookWaitingQueue.peekNextRequest(bookNumber);
+
             int choice = UIHelper.showConfirmMessage(
                     this,
-                    "Are you sure you want to serve the next request for this book?"
+                    "The next priority request is:\n\n"
+                            + buildRequestInfo(nextRequest)
+                            + "\n\nDo you want to create a borrow record for this student?"
             );
 
             if (choice != UIHelper.YES_OPTION) {
                 return;
             }
 
-            WaitingRequest request = BookWaitingQueue.serveNextRequest(bookNumber);
+            String recordIdText = readRequiredDialogText(
+                    "Enter a new Borrow Record ID:",
+                    "Borrow Record ID"
+            );
 
-            if (request == null) {
-                UIHelper.showErrorMessage(this, "There is no waiting request for this book.");
+            if (recordIdText == null) {
                 return;
             }
 
-            UIHelper.showSuccessMessage(
-                    this,
-                    "The following request has been served:\n\n" + buildRequestInfo(request)
+            int recordId = readPositiveIntegerText(
+                    recordIdText,
+                    "Borrow Record ID"
             );
 
-            refreshRequestsTable();
-            clearFields();
+            String borrowDate = readRequiredDialogText(
+                    "Enter Borrow Date (example: 2026-06-21):",
+                    "Borrow Date"
+            );
+
+            if (borrowDate == null) {
+                return;
+            }
+
+            String expectedReturnDate = readRequiredDialogText(
+                    "Enter Expected Return Date (example: 2026-07-05):",
+                    "Expected Return Date"
+            );
+
+            if (expectedReturnDate == null) {
+                return;
+            }
+
+            String message = BookWaitingQueue.serveNextRequest(
+                    bookNumber,
+                    recordId,
+                    borrowDate,
+                    expectedReturnDate
+            );
+
+            if ("Done .".equals(message)) {
+                UIHelper.showSuccessMessage(
+                        this,
+                        "Request served successfully.\n\n"
+                                + "A borrow record was created for:\n"
+                                + nextRequest.getStudentName()
+                );
+
+                refreshRequestsTable();
+                clearFields();
+            } else {
+                UIHelper.showErrorMessage(this, message);
+            }
 
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
@@ -369,6 +423,42 @@ public class WaitingQueuePanel extends JPanel {
         }
 
         return text;
+    }
+
+    private String readRequiredDialogText(String message, String fieldName) {
+        String text = JOptionPane.showInputDialog(this, message);
+
+        if (text == null) {
+            return null;
+        }
+
+        text = text.trim();
+
+        if (text.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+
+        return text;
+    }
+
+
+    private int readPositiveIntegerText(String text, String fieldName) {
+        try {
+            int value = Integer.parseInt(text.trim());
+
+            if (value <= 0) {
+                throw new IllegalArgumentException(
+                        fieldName + " must be greater than 0."
+                );
+            }
+
+            return value;
+
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(
+                    fieldName + " must be a valid number."
+            );
+        }
     }
 
     private void clearFields() {

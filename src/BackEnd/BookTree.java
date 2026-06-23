@@ -254,6 +254,11 @@ public class BookTree {
 
         Book b = search(number);
         if (b == null) return "The book doesn't exist .";
+
+        if (b.getBorrowedCopies() <= 0) {
+            return "There are no borrowed copies to return .";
+        }
+
         b.setBorrowedCopies(-1);
         return "Done .";
     }

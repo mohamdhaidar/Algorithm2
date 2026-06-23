@@ -151,18 +151,18 @@ public class BorrowingPanel extends JPanel {
         gbc.gridwidth = 1;
 
         gbc.gridx = 0;
-        gbc.gridy = row * 2;
-        gbc.weightx = 1;
+        gbc.gridy = row;
+        gbc.weightx = 0;
         panel.add(label, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = row * 2 + 1;
+        gbc.gridx = 1;
+        gbc.gridy = row;
         gbc.weightx = 1;
         panel.add(field, gbc);
     }
 
     private JPanel createButtonsPanel() {
-        JPanel buttonsPanel = new JPanel(new GridLayout(6, 1, 0, 10));
+        JPanel buttonsPanel = new JPanel(new GridLayout(3, 2, 10, 10));
         buttonsPanel.setOpaque(false);
 
         JButton borrowButton = UIHelper.createPrimaryButton("Borrow Book");

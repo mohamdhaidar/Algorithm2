@@ -5,23 +5,60 @@ import java.util.ArrayList;
 public class BookWaitingQueue {
     private static WaitingRequest front = null;
 
-    public static String addRequest(int requestId, int bookNumber, String studentName, boolean graduatingStudent, String requestDate) {
+    public static String addRequest(
+            int requestId,
+            int bookNumber,
+            String studentName,
+            boolean graduatingStudent,
+            String requestDate
+    ) {
+        if (requestId <= 0) {
+            return "Request ID must be greater than 0.";
+        }
+
+        if (bookNumber <= 0) {
+            return "Book Number must be greater than 0.";
+        }
+
+        if (studentName == null || studentName.trim().isEmpty()) {
+            return "Student name is required.";
+        }
+
+        if (requestDate == null || requestDate.trim().isEmpty()) {
+            return "Request date is required.";
+        }
+
         if (searchByRequestId(requestId) != null) {
-            System.out.println("Waiting request already exists.");
             return "Waiting request already exists.";
         }
 
-        WaitingRequest newRequest = new WaitingRequest(requestId, bookNumber, studentName, graduatingStudent, requestDate);
+        Book book = BookTree.search(bookNumber);
+
+        if (book == null) {
+            return "The book doesn't exist .";
+        }
+
+        if (book.getAvailableCopies() > 0) {
+            return "This book is currently available, so a waiting request is not needed.";
+        }
+
+        WaitingRequest newRequest = new WaitingRequest(
+                requestId,
+                bookNumber,
+                studentName.trim(),
+                graduatingStudent,
+                requestDate.trim()
+        );
 
         if (front == null) {
             front = newRequest;
-            return "Done.";
+            return "Done .";
         }
 
         if (newRequest.graduatingStudent && !front.graduatingStudent) {
             newRequest.next = front;
             front = newRequest;
-            return "Done.";
+            return "Done .";
         }
 
         WaitingRequest cur = front;
@@ -36,9 +73,9 @@ public class BookWaitingQueue {
 
         newRequest.next = cur.next;
         cur.next = newRequest;
-        return "Done.";
-    }
 
+        return "Done .";
+    }
     public static WaitingRequest peekNextRequest(int bookNumber) {
         WaitingRequest cur = front;
 
@@ -52,33 +89,97 @@ public class BookWaitingQueue {
 
         return null;
     }
+    public static String validateServeNextRequest(int bookNumber) {
+        if (bookNumber <= 0) {
+            return "Book Number must be greater than 0.";
+        }
 
-    public static WaitingRequest serveNextRequest(int bookNumber) {
+        Book book = BookTree.search(bookNumber);
+
+        if (book == null) {
+            return "The book doesn't exist .";
+        }
+
+        if (peekNextRequest(bookNumber) == null) {
+            return "There is no waiting request for this book.";
+        }
+
+        if (book.getAvailableCopies() <= 0) {
+            return "There is no available copy for this book yet.";
+        }
+
+        return "Done .";
+    }
+
+
+    public static String serveNextRequest(
+            int bookNumber,
+            int recordId,
+            String borrowDate,
+            String expectedReturnDate
+    ) {
+        String validationMessage = validateServeNextRequest(bookNumber);
+
+        if (!"Done .".equals(validationMessage)) {
+            return validationMessage;
+        }
+
+        if (recordId <= 0) {
+            return "Record ID must be greater than 0.";
+        }
+
+        if (borrowDate == null || borrowDate.trim().isEmpty()) {
+            return "Borrow date is required.";
+        }
+
+        if (expectedReturnDate == null || expectedReturnDate.trim().isEmpty()) {
+            return "Expected return date is required.";
+        }
+
+        WaitingRequest nextRequest = peekNextRequest(bookNumber);
+
+        String borrowResult = BorrowRecordList.borrowBookWithRecord(
+                recordId,
+                bookNumber,
+                nextRequest.getStudentName(),
+                borrowDate.trim(),
+                expectedReturnDate.trim()
+        );
+
+        if (!"Done .".equals(borrowResult)) {
+            return borrowResult;
+        }
+
+        removeNextRequest(bookNumber);
+
+        return "Done .";
+    }
+
+
+    private static void removeNextRequest(int bookNumber) {
         if (front == null) {
-            return null;
+            return;
         }
 
         if (front.bookNumber == bookNumber) {
-            WaitingRequest temp = front;
+            WaitingRequest removedRequest = front;
             front = front.next;
-            temp.next = null;
-            return temp;
+            removedRequest.next = null;
+            return;
         }
 
         WaitingRequest cur = front;
 
         while (cur.next != null) {
             if (cur.next.bookNumber == bookNumber) {
-                WaitingRequest temp = cur.next;
+                WaitingRequest removedRequest = cur.next;
                 cur.next = cur.next.next;
-                temp.next = null;
-                return temp;
+                removedRequest.next = null;
+                return;
             }
 
             cur = cur.next;
         }
-
-        return null;
     }
 
     public static WaitingRequest searchByRequestId(int requestId) {

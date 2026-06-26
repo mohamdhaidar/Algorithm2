@@ -1,15 +1,22 @@
 package BackEnd;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class BookWaitingQueue {
+    private static final String DONE = "Done .";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+
     private static WaitingRequest front = null;
+    private static long nextArrivalOrder = 0;
 
     public static String addRequest(
             int requestId,
             int bookNumber,
-            String studentName,
-            boolean graduatingStudent,
+            String studentId,
             String requestDate
     ) {
         if (requestId <= 0) {
@@ -20,20 +27,24 @@ public class BookWaitingQueue {
             return "Book Number must be greater than 0.";
         }
 
-        if (studentName == null || studentName.trim().isEmpty()) {
-            return "Student name is required.";
+        if (isBlank(studentId)) {
+            return "Student ID is required.";
         }
 
-        if (requestDate == null || requestDate.trim().isEmpty()) {
-            return "Request date is required.";
+        if (!isValidDate(requestDate)) {
+            return "Request date must be a real date in yyyy-MM-dd format.";
         }
 
         if (searchByRequestId(requestId) != null) {
             return "Waiting request already exists.";
         }
 
-        Book book = BookTree.search(bookNumber);
+        Student student = StudentRegistry.findStudentById(studentId);
+        if (student == null) {
+            return "Student ID was not found. Register the student first.";
+        }
 
+        Book book = BookTree.search(bookNumber);
         if (book == null) {
             return "The book doesn't exist .";
         }
@@ -42,60 +53,38 @@ public class BookWaitingQueue {
             return "This book is currently available, so a waiting request is not needed.";
         }
 
+        if (hasWaitingRequestForStudentAndBook(bookNumber, student.getStudentId())) {
+            return "This student already has a waiting request for this book.";
+        }
+
         WaitingRequest newRequest = new WaitingRequest(
                 requestId,
                 bookNumber,
-                studentName.trim(),
-                graduatingStudent,
-                requestDate.trim()
+                student.getStudentId(),
+                requestDate.trim(),
+                nextArrivalOrder++
         );
-
-        if (front == null) {
-            front = newRequest;
-            return "Done .";
-        }
-
-        if (newRequest.graduatingStudent && !front.graduatingStudent) {
-            newRequest.next = front;
-            front = newRequest;
-            return "Done .";
-        }
-
-        WaitingRequest cur = front;
-
-        while (cur.next != null) {
-            if (newRequest.graduatingStudent && !cur.next.graduatingStudent) {
-                break;
-            }
-
-            cur = cur.next;
-        }
-
-        newRequest.next = cur.next;
-        cur.next = newRequest;
-
-        return "Done .";
+        insertByPriority(newRequest);
+        return DONE;
     }
+
     public static WaitingRequest peekNextRequest(int bookNumber) {
         WaitingRequest cur = front;
-
         while (cur != null) {
             if (cur.bookNumber == bookNumber) {
                 return cur;
             }
-
             cur = cur.next;
         }
-
         return null;
     }
+
     public static String validateServeNextRequest(int bookNumber) {
         if (bookNumber <= 0) {
             return "Book Number must be greater than 0.";
         }
 
         Book book = BookTree.search(bookNumber);
-
         if (book == null) {
             return "The book doesn't exist .";
         }
@@ -108,19 +97,16 @@ public class BookWaitingQueue {
             return "There is no available copy for this book yet.";
         }
 
-        return "Done .";
+        return DONE;
     }
-
 
     public static String serveNextRequest(
             int bookNumber,
             int recordId,
-            String borrowDate,
             String expectedReturnDate
     ) {
         String validationMessage = validateServeNextRequest(bookNumber);
-
-        if (!"Done .".equals(validationMessage)) {
+        if (!DONE.equals(validationMessage)) {
             return validationMessage;
         }
 
@@ -128,33 +114,116 @@ public class BookWaitingQueue {
             return "Record ID must be greater than 0.";
         }
 
-        if (borrowDate == null || borrowDate.trim().isEmpty()) {
-            return "Borrow date is required.";
-        }
-
-        if (expectedReturnDate == null || expectedReturnDate.trim().isEmpty()) {
-            return "Expected return date is required.";
-        }
-
         WaitingRequest nextRequest = peekNextRequest(bookNumber);
-
         String borrowResult = BorrowRecordList.borrowBookWithRecord(
                 recordId,
                 bookNumber,
-                nextRequest.getStudentName(),
-                borrowDate.trim(),
-                expectedReturnDate.trim()
+                nextRequest.getStudentId(),
+                expectedReturnDate
         );
 
-        if (!"Done .".equals(borrowResult)) {
+        if (!DONE.equals(borrowResult)) {
             return borrowResult;
         }
 
         removeNextRequest(bookNumber);
-
-        return "Done .";
+        return DONE;
     }
 
+    static void refreshPriorityForStudent(String studentId) {
+        if (front == null) {
+            return;
+        }
+
+        ArrayList<WaitingRequest> requests = getAllRequests();
+        requests.sort(Comparator
+                .comparing(WaitingRequest::isGraduatingStudent)
+                .reversed()
+                .thenComparingLong(WaitingRequest::getArrivalOrder));
+
+        front = null;
+        WaitingRequest tail = null;
+        for (WaitingRequest request : requests) {
+            request.next = null;
+            if (front == null) {
+                front = request;
+                tail = request;
+            } else {
+                tail.next = request;
+                tail = request;
+            }
+        }
+    }
+
+    public static WaitingRequest searchByRequestId(int requestId) {
+        WaitingRequest cur = front;
+        while (cur != null) {
+            if (cur.requestId == requestId) {
+                return cur;
+            }
+            cur = cur.next;
+        }
+        return null;
+    }
+
+    public static ArrayList<WaitingRequest> getAllRequests() {
+        ArrayList<WaitingRequest> requests = new ArrayList<>();
+        WaitingRequest cur = front;
+        while (cur != null) {
+            requests.add(cur);
+            cur = cur.next;
+        }
+        return requests;
+    }
+
+    public static ArrayList<WaitingRequest> getRequestsByBookNumber(int bookNumber) {
+        ArrayList<WaitingRequest> requests = new ArrayList<>();
+        WaitingRequest cur = front;
+        while (cur != null) {
+            if (cur.bookNumber == bookNumber) {
+                requests.add(cur);
+            }
+            cur = cur.next;
+        }
+        return requests;
+    }
+
+    public static void printAllRequests() {
+        if (front == null) {
+            System.out.println("There are no waiting requests.");
+            return;
+        }
+
+        WaitingRequest cur = front;
+        while (cur != null) {
+            System.out.println(cur);
+            cur = cur.next;
+        }
+    }
+
+    private static void insertByPriority(WaitingRequest newRequest) {
+        if (front == null) {
+            front = newRequest;
+            return;
+        }
+
+        if (newRequest.isGraduatingStudent() && !front.isGraduatingStudent()) {
+            newRequest.next = front;
+            front = newRequest;
+            return;
+        }
+
+        WaitingRequest cur = front;
+        while (cur.next != null) {
+            if (newRequest.isGraduatingStudent() && !cur.next.isGraduatingStudent()) {
+                break;
+            }
+            cur = cur.next;
+        }
+
+        newRequest.next = cur.next;
+        cur.next = newRequest;
+    }
 
     private static void removeNextRequest(int bookNumber) {
         if (front == null) {
@@ -169,7 +238,6 @@ public class BookWaitingQueue {
         }
 
         WaitingRequest cur = front;
-
         while (cur.next != null) {
             if (cur.next.bookNumber == bookNumber) {
                 WaitingRequest removedRequest = cur.next;
@@ -177,50 +245,34 @@ public class BookWaitingQueue {
                 removedRequest.next = null;
                 return;
             }
-
             cur = cur.next;
         }
     }
 
-    public static WaitingRequest searchByRequestId(int requestId) {
+    private static boolean hasWaitingRequestForStudentAndBook(int bookNumber, String studentId) {
         WaitingRequest cur = front;
-
         while (cur != null) {
-            if (cur.requestId == requestId) {
-                return cur;
+            if (cur.bookNumber == bookNumber && cur.studentId.equalsIgnoreCase(studentId.trim())) {
+                return true;
             }
-
             cur = cur.next;
         }
-
-        return null;
+        return false;
     }
 
-    public static ArrayList<WaitingRequest> getAllRequests() {
-        ArrayList<WaitingRequest> requests = new ArrayList<>();
-        WaitingRequest cur = front;
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
 
-        while (cur != null) {
-            requests.add(cur);
-            cur = cur.next;
+    private static boolean isValidDate(String dateText) {
+        if (isBlank(dateText)) {
+            return false;
         }
-
-        return requests;
-    }
-
-    public static ArrayList<WaitingRequest> getRequestsByBookNumber(int bookNumber) {
-        ArrayList<WaitingRequest> requests = new ArrayList<>();
-        WaitingRequest cur = front;
-
-        while (cur != null) {
-            if (cur.bookNumber == bookNumber) {
-                requests.add(cur);
-            }
-
-            cur = cur.next;
+        try {
+            LocalDate.parse(dateText.trim(), DATE_FORMATTER);
+            return true;
+        } catch (DateTimeParseException ex) {
+            return false;
         }
-
-        return requests;
     }
-
 }

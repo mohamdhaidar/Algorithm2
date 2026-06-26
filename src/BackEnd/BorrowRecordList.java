@@ -1,12 +1,23 @@
 package BackEnd;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 
 public class BorrowRecordList {
-    private static BorrowRecord head = null;
+    private static final String DONE = "Done .";
     private static final int MAX_BORROW_LIMIT = 3;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
-    public static String addBorrowRecord(int recordId, int bookNumber, String borrowerName, String borrowDate, String expectedReturnDate) {
+    private static BorrowRecord head = null;
+
+    public static String borrowBookWithRecord(
+            int recordId,
+            int bookNumber,
+            String studentId,
+            String expectedReturnDate
+    ) {
         if (recordId <= 0) {
             return "Record ID must be greater than 0.";
         }
@@ -15,87 +26,133 @@ public class BorrowRecordList {
             return "Book number must be greater than 0.";
         }
 
-        if (borrowerName == null || borrowerName.trim().isEmpty()) {
-            return "Borrower name is required.";
+        if (isBlank(studentId)) {
+            return "Student ID is required.";
         }
 
-        if (borrowDate == null || borrowDate.trim().isEmpty()) {
-            return "Borrow date is required.";
-        }
-
-        if (expectedReturnDate == null || expectedReturnDate.trim().isEmpty()) {
-            return "Expected return date is required.";
+        Student student = StudentRegistry.findStudentById(studentId);
+        if (student == null) {
+            return "Student ID was not found. Register the student first.";
         }
 
         if (searchByRecordId(recordId) != null) {
             return "Borrow record already exists.";
         }
 
-        BorrowRecord newRecord = new BorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
-
-        if (head == null) {
-            head = newRecord;
-            return "Done .";
+        LocalDate today = LocalDate.now();
+        LocalDate expectedDate = parseDate(expectedReturnDate, "Expected return date");
+        if (expectedDate == null) {
+            return "Expected return date must be a real date in yyyy-MM-dd format.";
         }
 
-        BorrowRecord cur = head;
-
-        while (cur.next != null) {
-            cur = cur.next;
+        if (expectedDate.isBefore(today)) {
+            return "Expected return date cannot be before the borrow date.";
         }
 
-        cur.next = newRecord;
-        return "Done .";
+        if (!canBorrowMore(student.getStudentId())) {
+            return "Borrowing failed. The student has reached the maximum borrow limit.";
+        }
+
+        String borrowResult = BookTree.BorrowBook(bookNumber);
+        if (!DONE.equals(borrowResult)) {
+            return borrowResult;
+        }
+
+        BorrowRecord newRecord = new BorrowRecord(
+                recordId,
+                bookNumber,
+                student.getStudentId(),
+                student.getStudentName(),
+                today.format(DATE_FORMATTER),
+                expectedDate.format(DATE_FORMATTER)
+        );
+        appendRecord(newRecord);
+        return DONE;
     }
 
     public static BorrowRecord searchByRecordId(int recordId) {
         BorrowRecord cur = head;
-
         while (cur != null) {
             if (cur.recordId == recordId) {
                 return cur;
             }
-
             cur = cur.next;
         }
-
         return null;
     }
 
-    public static ArrayList<BorrowRecord> searchByBorrowerName(String borrowerName) {
+    public static ArrayList<BorrowRecord> searchByStudentName(String studentName) {
         ArrayList<BorrowRecord> result = new ArrayList<>();
-        BorrowRecord cur = head;
-
-        while (cur != null) {
-            if (cur.borrowerName.equalsIgnoreCase(borrowerName)) {
-                result.add(cur);
-            }
-
-            cur = cur.next;
+        if (isBlank(studentName)) {
+            return result;
         }
 
+        String normalizedName = studentName.trim();
+        BorrowRecord cur = head;
+        while (cur != null) {
+            if (cur.studentName.equalsIgnoreCase(normalizedName)) {
+                result.add(cur);
+            }
+            cur = cur.next;
+        }
         return result;
     }
 
-    public static boolean updateExpectedReturnDate(int recordId, String newExpectedReturnDate) {
-        BorrowRecord record = searchByRecordId(recordId);
-
-        if (record == null) {
-            return false;
+    public static ArrayList<BorrowRecord> searchByStudentId(String studentId) {
+        ArrayList<BorrowRecord> result = new ArrayList<>();
+        if (isBlank(studentId)) {
+            return result;
         }
 
-        record.expectedReturnDate = newExpectedReturnDate;
-        return true;
+        String normalizedId = studentId.trim();
+        BorrowRecord cur = head;
+        while (cur != null) {
+            if (cur.studentId.equalsIgnoreCase(normalizedId)) {
+                result.add(cur);
+            }
+            cur = cur.next;
+        }
+        return result;
     }
 
-
-    public static String returnBorrowedBook(int recordId) {
-        BorrowRecord record = searchByRecordId(recordId);
-
+    public static String updateExpectedReturnDate(int recordId, String newExpectedReturnDate) {
         if (recordId <= 0) {
             return "Record ID must be greater than 0.";
         }
 
+        BorrowRecord record = searchByRecordId(recordId);
+        if (record == null) {
+            return "Borrow record not found.";
+        }
+
+        if (record.returned) {
+            return "Expected return date cannot be changed because this book was returned.";
+        }
+
+        LocalDate newDate = parseDate(newExpectedReturnDate, "Expected return date");
+        if (newDate == null) {
+            return "Expected return date must be a real date in yyyy-MM-dd format.";
+        }
+
+        LocalDate borrowDate = parseDate(record.borrowDate, "Borrow date");
+        if (borrowDate == null) {
+            return "Borrow date is stored in an invalid format.";
+        }
+
+        if (newDate.isBefore(borrowDate)) {
+            return "Expected return date cannot be before the borrow date.";
+        }
+
+        record.expectedReturnDate = newDate.format(DATE_FORMATTER);
+        return DONE;
+    }
+
+    public static String returnBorrowedBook(int recordId) {
+        if (recordId <= 0) {
+            return "Record ID must be greater than 0.";
+        }
+
+        BorrowRecord record = searchByRecordId(recordId);
         if (record == null) {
             return "Borrow record not found.";
         }
@@ -105,46 +162,43 @@ public class BorrowRecordList {
         }
 
         String result = BookTree.returnBook(record.bookNumber);
-
-        if (!"Done .".equals(result)) {
+        if (!DONE.equals(result)) {
             return result;
         }
 
         record.returned = true;
-        return "Done .";
+        return DONE;
     }
 
-    public static int countActiveBorrowRecords(String borrowerName) {
-        BorrowRecord cur = head;
-        int count = 0;
-
-        while (cur != null) {
-            if (cur.borrowerName.equalsIgnoreCase(borrowerName) && !cur.returned ) {
-                count++;
-            }
-
-            cur = cur.next;
+    public static int countActiveBorrowRecords(String studentId) {
+        if (isBlank(studentId)) {
+            return 0;
         }
 
+        int count = 0;
+        String normalizedId = studentId.trim();
+        BorrowRecord cur = head;
+        while (cur != null) {
+            if (cur.studentId.equalsIgnoreCase(normalizedId) && !cur.returned) {
+                count++;
+            }
+            cur = cur.next;
+        }
         return count;
     }
 
-    public static boolean canBorrowMore(String borrowerName) {
-        return countActiveBorrowRecords(borrowerName) < MAX_BORROW_LIMIT;
+    public static boolean canBorrowMore(String studentId) {
+        return countActiveBorrowRecords(studentId) < MAX_BORROW_LIMIT;
     }
 
-    public static String addBorrowRecordWithLimitCheck(int recordId, int bookNumber, String borrowerName, String borrowDate, String expectedReturnDate) {
-        if (!canBorrowMore(borrowerName)) {
-            return "Borrowing failed. The borrower has reached the maximum borrow limit.";
+    public static ArrayList<BorrowRecord> getAllRecords() {
+        ArrayList<BorrowRecord> records = new ArrayList<>();
+        BorrowRecord cur = head;
+        while (cur != null) {
+            records.add(cur);
+            cur = cur.next;
         }
-
-        String result = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
-
-        if (!"Done .".equals(result)) {
-            return result;
-        }
-
-        return "Borrow record added successfully.";
+        return records;
     }
 
     public static void printAllRecords() {
@@ -154,40 +208,47 @@ public class BorrowRecordList {
         }
 
         BorrowRecord cur = head;
-
         while (cur != null) {
             System.out.println(cur);
             cur = cur.next;
         }
     }
 
-    private static int countBorrowRecords() {
-        BorrowRecord cur = head;
-        int count = 0;
+    private static void appendRecord(BorrowRecord newRecord) {
+        if (head == null) {
+            head = newRecord;
+            return;
+        }
 
+        BorrowRecord cur = head;
+        while (cur.next != null) {
+            cur = cur.next;
+        }
+        cur.next = newRecord;
+    }
+
+    private static int countBorrowRecords() {
+        int count = 0;
+        BorrowRecord cur = head;
         while (cur != null) {
             count++;
             cur = cur.next;
         }
-
         return count;
     }
 
-    // the most read books
-
+    // The most borrowed books
     private static int findBookIndex(int[] bookNumbers, int size, int bookNumber) {
         for (int i = 0; i < size; i++) {
             if (bookNumbers[i] == bookNumber) {
                 return i;
             }
         }
-
         return -1;
     }
 
     public static String getMostBorrowedBooksReport() {
         int recordsCount = countBorrowRecords();
-
         if (recordsCount == 0) {
             return "There are no borrow records.";
         }
@@ -197,10 +258,8 @@ public class BorrowRecordList {
         int uniqueBooks = 0;
 
         BorrowRecord cur = head;
-
         while (cur != null) {
             int index = findBookIndex(bookNumbers, uniqueBooks, cur.bookNumber);
-
             if (index == -1) {
                 bookNumbers[uniqueBooks] = cur.bookNumber;
                 borrowCounts[uniqueBooks] = 1;
@@ -208,12 +267,10 @@ public class BorrowRecordList {
             } else {
                 borrowCounts[index]++;
             }
-
             cur = cur.next;
         }
 
         int max = borrowCounts[0];
-
         for (int i = 1; i < uniqueBooks; i++) {
             if (borrowCounts[i] > max) {
                 max = borrowCounts[i];
@@ -221,7 +278,6 @@ public class BorrowRecordList {
         }
 
         StringBuilder report = new StringBuilder("Most borrowed book(s):\n");
-
         for (int i = 0; i < uniqueBooks; i++) {
             if (borrowCounts[i] == max) {
                 report.append("Book Number: ")
@@ -231,25 +287,21 @@ public class BorrowRecordList {
                         .append("\n");
             }
         }
-
         return report.toString();
     }
 
-    // the most read authors
-
+    // The most read authors
     private static int findAuthorIndex(String[] authors, int size, String author) {
         for (int i = 0; i < size; i++) {
             if (authors[i].equalsIgnoreCase(author)) {
                 return i;
             }
         }
-
         return -1;
     }
 
     public static String getMostReadAuthorsReport() {
         int recordsCount = countBorrowRecords();
-
         if (recordsCount == 0) {
             return "There are no borrow records.";
         }
@@ -259,15 +311,11 @@ public class BorrowRecordList {
         int uniqueAuthors = 0;
 
         BorrowRecord cur = head;
-
         while (cur != null) {
             Book book = BookTree.search(cur.bookNumber);
-
             if (book != null) {
                 String author = book.getAuthor();
-
                 int index = findAuthorIndex(authors, uniqueAuthors, author);
-
                 if (index == -1) {
                     authors[uniqueAuthors] = author;
                     authorCounts[uniqueAuthors] = 1;
@@ -276,7 +324,6 @@ public class BorrowRecordList {
                     authorCounts[index]++;
                 }
             }
-
             cur = cur.next;
         }
 
@@ -285,7 +332,6 @@ public class BorrowRecordList {
         }
 
         int max = authorCounts[0];
-
         for (int i = 1; i < uniqueAuthors; i++) {
             if (authorCounts[i] > max) {
                 max = authorCounts[i];
@@ -293,7 +339,6 @@ public class BorrowRecordList {
         }
 
         StringBuilder report = new StringBuilder("Most read author(s):\n");
-
         for (int i = 0; i < uniqueAuthors; i++) {
             if (authorCounts[i] == max) {
                 report.append("Author: ")
@@ -303,46 +348,22 @@ public class BorrowRecordList {
                         .append("\n");
             }
         }
-
         return report.toString();
     }
 
-    public static ArrayList<BorrowRecord> getAllRecords() {
-        ArrayList<BorrowRecord> records = new ArrayList<>();
-        BorrowRecord cur = head;
-
-        while (cur != null) {
-            records.add(cur);
-            cur = cur.next;
-        }
-
-        return records;
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
-    public static String borrowBookWithRecord(int recordId, int bookNumber, String borrowerName, String borrowDate, String expectedReturnDate) {
-        if (searchByRecordId(recordId) != null) {
-            return "Borrow record already exists.";
+    private static LocalDate parseDate(String text, String fieldName) {
+        if (isBlank(text)) {
+            return null;
         }
 
-        if (!canBorrowMore(borrowerName)) {
-            return "Borrowing failed. The borrower has reached the maximum borrow limit.";
+        try {
+            return LocalDate.parse(text.trim(), DATE_FORMATTER);
+        } catch (DateTimeParseException ex) {
+            return null;
         }
-
-        String borrowResult = BookTree.BorrowBook(bookNumber);
-
-        if (!"Done .".equals(borrowResult)) {
-            return borrowResult;
-        }
-
-        String addRecordResult = addBorrowRecord(recordId, bookNumber, borrowerName, borrowDate, expectedReturnDate);
-
-        if (!"Done .".equals(addRecordResult)) {
-            BookTree.returnBook(bookNumber);
-            return addRecordResult;
-        }
-
-        return "Done .";
-
     }
-
 }

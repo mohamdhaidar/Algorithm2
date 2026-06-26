@@ -1,37 +1,57 @@
 package FrontEnd;
 
 import BackEnd.BookWaitingQueue;
+import BackEnd.BorrowRecord;
+import BackEnd.Student;
+import BackEnd.StudentRegistry;
 import BackEnd.WaitingRequest;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Insets;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import javax.swing.JOptionPane;
 
+/**
+ * Waiting-queue UI. It accepts only Student ID and displays central student
+ * data as read-only, leaving queue priority and borrowing rules to the backend.
+ */
 public class WaitingQueuePanel extends JPanel {
 
     private JTable requestsTable;
     private DefaultTableModel tableModel;
 
-    private JTextField requestIdField;
-    private JTextField bookNumberField;
-    private JTextField studentNameField;
-    private JTextField requestDateField;
-    private JCheckBox graduatingStudentCheckBox;
+    private JTextField addRequestIdField;
+    private JTextField addBookNumberField;
+    private JTextField addStudentIdField;
+    private JTextField addStudentNameDisplayField;
+    private JTextField addGraduatingStatusDisplayField;
+    private JSpinner addRequestDateSpinner;
+
+    private JTextField browseBookNumberField;
+    private JTextArea browseRequestInfoArea;
+
+    private JTextField serveBookNumberField;
+    private JTextField serveRecordIdField;
+    private JTextField serveBorrowDateDisplayField;
+    private JSpinner serveExpectedReturnDateSpinner;
+    private JTextArea serveRequestInfoArea;
 
     public WaitingQueuePanel() {
         initComponents();
@@ -49,6 +69,7 @@ public class WaitingQueuePanel extends JPanel {
                 new Object[]{
                         "Request ID",
                         "Book Number",
+                        "Student ID",
                         "Student Name",
                         "Graduating Student",
                         "Request Date"
@@ -64,35 +85,44 @@ public class WaitingQueuePanel extends JPanel {
         requestsTable = new JTable(tableModel);
         UIHelper.styleTable(requestsTable);
         requestsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
+        configureTableColumns();
         requestsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                fillFieldsFromSelectedRow();
+                loadSelectedRequestIntoActionTabs();
             }
         });
 
-        JScrollPane scrollPane = new JScrollPane(requestsTable);
+        JScrollPane requestsScrollPane = new JScrollPane(requestsTable);
+        requestsScrollPane.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER_COLOR));
 
-        JPanel rightPanel = new JPanel(new BorderLayout(10, 15));
+        JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setOpaque(false);
-        rightPanel.setPreferredSize(new Dimension(360, 0));
+        rightPanel.setPreferredSize(new Dimension(500, 0));
+        rightPanel.add(createActionTabs(), BorderLayout.CENTER);
 
-        rightPanel.add(createFormPanel(), BorderLayout.NORTH);
-        rightPanel.add(createButtonsPanel(), BorderLayout.CENTER);
-
-        add(scrollPane, BorderLayout.CENTER);
+        add(requestsScrollPane, BorderLayout.CENTER);
         add(rightPanel, BorderLayout.EAST);
+    }
+
+    private void configureTableColumns() {
+        int[] widths = {90, 100, 105, 145, 145, 110};
+        requestsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        for (int i = 0; i < widths.length; i++) {
+            requestsTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        }
     }
 
     private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("Waiting Queue");
+        JLabel titleLabel = new JLabel("Waiting Queue Management");
         titleLabel.setFont(UIHelper.PAGE_TITLE_FONT);
         titleLabel.setForeground(UIHelper.TEXT_COLOR);
 
-        JLabel subtitleLabel = new JLabel("Manage priority waiting requests for unavailable books.");
+        JLabel subtitleLabel = new JLabel(
+                "Graduating priority is always taken from the central student profile."
+        );
         subtitleLabel.setFont(UIHelper.NORMAL_FONT);
         subtitleLabel.setForeground(UIHelper.SECONDARY_TEXT_COLOR);
         subtitleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
@@ -103,171 +133,205 @@ public class WaitingQueuePanel extends JPanel {
         textPanel.add(subtitleLabel, BorderLayout.CENTER);
 
         headerPanel.add(textPanel, BorderLayout.WEST);
-
         return headerPanel;
     }
 
-    private JPanel createFormPanel() {
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(UIHelper.WHITE_COLOR);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)),
-                BorderFactory.createEmptyBorder(18, 18, 18, 18)
-        ));
-
-        requestIdField = UIHelper.createTextField();
-        bookNumberField = UIHelper.createTextField();
-        studentNameField = UIHelper.createTextField();
-        requestDateField = UIHelper.createTextField();
-
-        graduatingStudentCheckBox = new JCheckBox("Graduating Student");
-        graduatingStudentCheckBox.setFont(UIHelper.NORMAL_FONT);
-        graduatingStudentCheckBox.setForeground(UIHelper.TEXT_COLOR);
-        graduatingStudentCheckBox.setBackground(UIHelper.WHITE_COLOR);
-        graduatingStudentCheckBox.setFocusPainted(false);
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 0, 8, 0);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1;
-
-        JLabel sectionTitle = new JLabel("Waiting Request Details");
-        sectionTitle.setFont(UIHelper.SECTION_TITLE_FONT);
-        sectionTitle.setForeground(UIHelper.TEXT_COLOR);
-
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        formPanel.add(sectionTitle, gbc);
-
-        addFormRow(formPanel, gbc, 1, "Request ID", requestIdField);
-        addFormRow(formPanel, gbc, 2, "Book Number", bookNumberField);
-        addFormRow(formPanel, gbc, 3, "Student Name", studentNameField);
-        addFormRow(formPanel, gbc, 4, "Request Date", requestDateField);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        formPanel.add(graduatingStudentCheckBox, gbc);
-
-        return formPanel;
+    private JTabbedPane createActionTabs() {
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setFont(UIHelper.NORMAL_FONT);
+        tabs.addTab("Add Request", createAddRequestTab());
+        tabs.addTab("Browse", createBrowseTab());
+        tabs.addTab("Serve Next", createServeNextTab());
+        tabs.setToolTipTextAt(0, "Add a request for an unavailable book");
+        tabs.setToolTipTextAt(1, "View waiting requests by book");
+        tabs.setToolTipTextAt(2, "Serve the next priority student for a book");
+        return tabs;
     }
 
-    private void addFormRow(JPanel panel, GridBagConstraints gbc, int row, String labelText, JTextField field) {
-        JLabel label = new JLabel(labelText);
-        label.setFont(UIHelper.NORMAL_FONT);
-        label.setForeground(UIHelper.TEXT_COLOR);
+    private JPanel createAddRequestTab() {
+        JPanel panel = UIHelper.createCardPanel();
+        panel.setLayout(new GridBagLayout());
 
-        gbc.gridwidth = 1;
+        addRequestIdField = UIHelper.createTextField();
+        addBookNumberField = UIHelper.createTextField();
+        addStudentIdField = UIHelper.createTextField();
+        addStudentNameDisplayField = UIHelper.createReadOnlyTextField();
+        addGraduatingStatusDisplayField = UIHelper.createReadOnlyTextField();
+        addRequestDateSpinner = UIHelper.createDateSpinner();
 
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0;
-        panel.add(label, gbc);
+        addStudentIdField.getDocument().addDocumentListener(new SimpleDocumentListener(this::clearRequestStudentDisplay));
 
-        gbc.gridx = 1;
-        gbc.gridy = row;
-        gbc.weightx = 1;
-        panel.add(field, gbc);
+        GridBagConstraints gbc = createFormConstraints();
+        addDescription(panel, gbc, 0,
+                "Students must be registered first. Their name and graduating status are loaded automatically.");
+        addFormRow(panel, gbc, 1, "Request ID", addRequestIdField);
+        addFormRow(panel, gbc, 2, "Book Number", addBookNumberField);
+        addFormRow(panel, gbc, 3, "Student ID", addStudentIdField);
+
+        JButton loadStudentButton = UIHelper.createSecondaryButton("Load Student");
+        loadStudentButton.addActionListener(e -> loadStudentForRequest());
+        addFullWidthComponent(panel, gbc, 4, loadStudentButton);
+
+        addFormRow(panel, gbc, 5, "Student Name", addStudentNameDisplayField);
+        addFormRow(panel, gbc, 6, "Graduating Status", addGraduatingStatusDisplayField);
+        addFormRow(panel, gbc, 7, "Request Date", addRequestDateSpinner);
+
+        JButton addRequestButton = UIHelper.createPrimaryButton("Add Waiting Request");
+        addRequestButton.addActionListener(e -> addWaitingRequest());
+        addFullWidthComponent(panel, gbc, 8, addRequestButton);
+
+        return panel;
     }
 
-    private JPanel createButtonsPanel() {
-        JPanel buttonsPanel = new JPanel(new GridLayout(3, 2, 10, 10));
-        buttonsPanel.setOpaque(false);
+    private JPanel createBrowseTab() {
+        JPanel panel = UIHelper.createCardPanel();
+        panel.setLayout(new GridBagLayout());
 
-        JButton addRequestButton = UIHelper.createPrimaryButton("Add Request");
-        JButton showByBookButton = UIHelper.createPrimaryButton("Show Requests By Book");
-        JButton peekNextButton = UIHelper.createPrimaryButton("Peek Next Request");
-        JButton serveNextButton = UIHelper.createPrimaryButton("Serve Next Request");
-        JButton refreshButton = UIHelper.createPrimaryButton("Refresh Table");
-        JButton clearButton = UIHelper.createPrimaryButton("Clear Fields");
+        browseBookNumberField = UIHelper.createTextField();
+        browseRequestInfoArea = UIHelper.createReadOnlyTextArea();
+        browseRequestInfoArea.setRows(8);
+        browseRequestInfoArea.setText("Enter a Book Number to view its waiting requests or next priority request.");
 
-        addRequestButton.addActionListener(e -> addRequest());
-        showByBookButton.addActionListener(e -> showRequestsByBook());
-        peekNextButton.addActionListener(e -> peekNextRequest());
-        serveNextButton.addActionListener(e -> serveNextRequest());
-        refreshButton.addActionListener(e -> refreshRequestsTable());
-        clearButton.addActionListener(e -> clearFields());
+        GridBagConstraints gbc = createFormConstraints();
+        addDescription(panel, gbc, 0,
+                "Use the Book Number to view all requests or only the next priority student for that book.");
+        addFormRow(panel, gbc, 1, "Book Number", browseBookNumberField);
 
-        buttonsPanel.add(addRequestButton);
-        buttonsPanel.add(showByBookButton);
-        buttonsPanel.add(peekNextButton);
-        buttonsPanel.add(serveNextButton);
-        buttonsPanel.add(refreshButton);
-        buttonsPanel.add(clearButton);
+        JButton showRequestsButton = UIHelper.createSecondaryButton("Show Requests for Book");
+        showRequestsButton.addActionListener(e -> showRequestsByBook());
+        addFullWidthComponent(panel, gbc, 2, showRequestsButton);
 
-        return buttonsPanel;
+        JButton viewNextButton = UIHelper.createPrimaryButton("View Next Priority Request");
+        viewNextButton.addActionListener(e -> viewNextRequest());
+        addFullWidthComponent(panel, gbc, 3, viewNextButton);
+        addFullWidthComponent(panel, gbc, 4, browseRequestInfoArea);
+
+        return panel;
     }
 
-    private void addRequest() {
+    private JPanel createServeNextTab() {
+        JPanel panel = UIHelper.createCardPanel();
+        panel.setLayout(new GridBagLayout());
+
+        serveBookNumberField = UIHelper.createTextField();
+        serveRecordIdField = UIHelper.createTextField();
+        serveBorrowDateDisplayField = UIHelper.createReadOnlyTextField();
+        serveBorrowDateDisplayField.setText(UIHelper.formatDate(LocalDate.now()));
+        serveBorrowDateDisplayField.setToolTipText("Created automatically by the backend when the request is served.");
+        serveExpectedReturnDateSpinner = UIHelper.createDateSpinner();
+        serveRequestInfoArea = UIHelper.createReadOnlyTextArea();
+        serveRequestInfoArea.setRows(8);
+        serveRequestInfoArea.setText("Enter a Book Number and load the next request before serving it.");
+
+        GridBagConstraints gbc = createFormConstraints();
+        addDescription(panel, gbc, 0,
+                "Serving a request creates a borrow record for the next priority student. Borrow Date is automatic.");
+        addFormRow(panel, gbc, 1, "Book Number", serveBookNumberField);
+
+        JButton loadNextButton = UIHelper.createSecondaryButton("Load Next Request");
+        loadNextButton.addActionListener(e -> loadNextRequestForService());
+        addFullWidthComponent(panel, gbc, 2, loadNextButton);
+
+        addFullWidthComponent(panel, gbc, 3, serveRequestInfoArea);
+        addFormRow(panel, gbc, 4, "New Borrow Record ID", serveRecordIdField);
+        addFormRow(panel, gbc, 5, "Borrow Date", serveBorrowDateDisplayField);
+        addFormRow(panel, gbc, 6, "Expected Return Date", serveExpectedReturnDateSpinner);
+
+        JButton serveButton = UIHelper.createPrimaryButton("Serve Next Request");
+        serveButton.addActionListener(e -> serveNextRequest());
+        addFullWidthComponent(panel, gbc, 7, serveButton);
+
+        return panel;
+    }
+
+    private void loadStudentForRequest() {
         try {
-            int requestId = readIntegerField(requestIdField, "Request ID");
-            int bookNumber = readIntegerField(bookNumberField, "Book Number");
-            String studentName = readTextField(studentNameField, "Student Name");
-            String requestDate = readTextField(requestDateField, "Request Date");
-            boolean graduatingStudent = graduatingStudentCheckBox.isSelected();
-
-            String message = BookWaitingQueue.addRequest(
-                    requestId,
-                    bookNumber,
-                    studentName,
-                    graduatingStudent,
-                    requestDate
-            );
-
-            if ("Done .".equals(message)) {
-                UIHelper.showSuccessMessage(
-                        this,
-                        "Waiting request added successfully."
-                );
-
-                refreshRequestsTable();
-                clearFields();
-            } else {
-                UIHelper.showErrorMessage(this, message);
+            String studentId = readRequiredText(addStudentIdField, "Student ID");
+            Student student = StudentRegistry.findStudentById(studentId);
+            if (student == null) {
+                clearRequestStudentDisplay();
+                UIHelper.showErrorMessage(this, "Student ID was not found. Register the student first.");
+                return;
             }
 
+            addStudentIdField.setText(student.getStudentId());
+            addStudentNameDisplayField.setText(student.getStudentName());
+            addGraduatingStatusDisplayField.setText(student.isGraduatingStudent() ? "Yes" : "No");
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
         }
     }
+
+    private void addWaitingRequest() {
+        try {
+            int requestId = readPositiveInteger(addRequestIdField, "Request ID");
+            int bookNumber = readPositiveInteger(addBookNumberField, "Book Number");
+            String studentId = readRequiredText(addStudentIdField, "Student ID");
+            LocalDate requestDate = UIHelper.readDateSpinner(addRequestDateSpinner, "Request Date");
+
+            String message = BookWaitingQueue.addRequest(
+                    requestId,
+                    bookNumber,
+                    studentId,
+                    UIHelper.formatDate(requestDate)
+            );
+
+            if (isDone(message)) {
+                UIHelper.showSuccessMessage(this, "Waiting request added successfully.");
+                refreshRequestsTable();
+                clearAddRequestForm();
+            } else {
+                UIHelper.showErrorMessage(this, message);
+            }
+        } catch (IllegalArgumentException ex) {
+            UIHelper.showErrorMessage(this, ex.getMessage());
+        }
+    }
+
     private void showRequestsByBook() {
         try {
-            int bookNumber = readIntegerField(bookNumberField, "Book Number");
-
+            int bookNumber = readPositiveInteger(browseBookNumberField, "Book Number");
             ArrayList<WaitingRequest> requests = BookWaitingQueue.getRequestsByBookNumber(bookNumber);
-
-            tableModel.setRowCount(0);
-
             if (requests.isEmpty()) {
                 UIHelper.showErrorMessage(this, "There are no waiting requests for this book.");
                 return;
             }
 
+            tableModel.setRowCount(0);
             for (WaitingRequest request : requests) {
                 addRequestToTable(request);
             }
-
-            UIHelper.showSuccessMessage(this, "Requests found.");
-
+            browseRequestInfoArea.setText(
+                    requests.size() + " waiting request(s) found for Book Number " + bookNumber + "."
+            );
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
         }
     }
 
-    private void peekNextRequest() {
+    private void viewNextRequest() {
         try {
-            int bookNumber = readIntegerField(bookNumberField, "Book Number");
-
+            int bookNumber = readPositiveInteger(browseBookNumberField, "Book Number");
             WaitingRequest request = BookWaitingQueue.peekNextRequest(bookNumber);
-
             if (request == null) {
                 UIHelper.showErrorMessage(this, "There is no waiting request for this book.");
                 return;
             }
+            browseRequestInfoArea.setText(buildRequestInfo(request));
+        } catch (IllegalArgumentException ex) {
+            UIHelper.showErrorMessage(this, ex.getMessage());
+        }
+    }
 
-            UIHelper.showSuccessMessage(this, buildRequestInfo(request));
-
+    private void loadNextRequestForService() {
+        try {
+            int bookNumber = readPositiveInteger(serveBookNumberField, "Book Number");
+            WaitingRequest request = BookWaitingQueue.peekNextRequest(bookNumber);
+            if (request == null) {
+                UIHelper.showErrorMessage(this, "There is no waiting request for this book.");
+                return;
+            }
+            serveRequestInfoArea.setText(buildRequestInfo(request));
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
         }
@@ -275,83 +339,50 @@ public class WaitingQueuePanel extends JPanel {
 
     private void serveNextRequest() {
         try {
-            int bookNumber = readIntegerField(bookNumberField, "Book Number");
-
-            String validationMessage =
-                    BookWaitingQueue.validateServeNextRequest(bookNumber);
-
-            if (!"Done .".equals(validationMessage)) {
-                UIHelper.showErrorMessage(this, validationMessage);
-                return;
-            }
-
-            WaitingRequest nextRequest =
-                    BookWaitingQueue.peekNextRequest(bookNumber);
-
-            int choice = UIHelper.showConfirmMessage(
-                    this,
-                    "The next priority request is:\n\n"
-                            + buildRequestInfo(nextRequest)
-                            + "\n\nDo you want to create a borrow record for this student?"
-            );
-
-            if (choice != UIHelper.YES_OPTION) {
-                return;
-            }
-
-            String recordIdText = readRequiredDialogText(
-                    "Enter a new Borrow Record ID:",
-                    "Borrow Record ID"
-            );
-
-            if (recordIdText == null) {
-                return;
-            }
-
-            int recordId = readPositiveIntegerText(
-                    recordIdText,
-                    "Borrow Record ID"
-            );
-
-            String borrowDate = readRequiredDialogText(
-                    "Enter Borrow Date (example: 2026-06-21):",
-                    "Borrow Date"
-            );
-
-            if (borrowDate == null) {
-                return;
-            }
-
-            String expectedReturnDate = readRequiredDialogText(
-                    "Enter Expected Return Date (example: 2026-07-05):",
+            int bookNumber = readPositiveInteger(serveBookNumberField, "Book Number");
+            int recordId = readPositiveInteger(serveRecordIdField, "New Borrow Record ID");
+            LocalDate expectedReturnDate = UIHelper.readDateSpinner(
+                    serveExpectedReturnDateSpinner,
                     "Expected Return Date"
             );
 
-            if (expectedReturnDate == null) {
+            WaitingRequest nextRequest = BookWaitingQueue.peekNextRequest(bookNumber);
+            if (nextRequest == null) {
+                UIHelper.showErrorMessage(this, "There is no waiting request for this book.");
+                return;
+            }
+
+            serveRequestInfoArea.setText(buildRequestInfo(nextRequest));
+            int choice = UIHelper.showConfirmMessage(
+                    this,
+                    "Create a borrow record for the next priority student?\n\n"
+                            + buildRequestInfo(nextRequest)
+                            + "\n\nBorrow Date: " + UIHelper.formatDate(LocalDate.now())
+                            + "\nExpected Return Date: " + UIHelper.formatDate(expectedReturnDate)
+            );
+            if (choice != UIHelper.YES_OPTION) {
                 return;
             }
 
             String message = BookWaitingQueue.serveNextRequest(
                     bookNumber,
                     recordId,
-                    borrowDate,
-                    expectedReturnDate
+                    UIHelper.formatDate(expectedReturnDate)
             );
 
-            if ("Done .".equals(message)) {
+            if (isDone(message)) {
+                BorrowRecord record = BackEnd.BorrowRecordList.searchByRecordId(recordId);
                 UIHelper.showSuccessMessage(
                         this,
                         "Request served successfully.\n\n"
-                                + "A borrow record was created for:\n"
-                                + nextRequest.getStudentName()
+                                + "Student: " + nextRequest.getStudentName() + " (" + nextRequest.getStudentId() + ")\n"
+                                + "Borrow Date: " + (record == null ? UIHelper.formatDate(LocalDate.now()) : record.getBorrowDate())
                 );
-
                 refreshRequestsTable();
-                clearFields();
+                clearServeForm();
             } else {
                 UIHelper.showErrorMessage(this, message);
             }
-
         } catch (IllegalArgumentException ex) {
             UIHelper.showErrorMessage(this, ex.getMessage());
         }
@@ -359,10 +390,7 @@ public class WaitingQueuePanel extends JPanel {
 
     public void refreshRequestsTable() {
         tableModel.setRowCount(0);
-
-        ArrayList<WaitingRequest> requests = BookWaitingQueue.getAllRequests();
-
-        for (WaitingRequest request : requests) {
+        for (WaitingRequest request : BookWaitingQueue.getAllRequests()) {
             addRequestToTable(request);
         }
     }
@@ -371,102 +399,159 @@ public class WaitingQueuePanel extends JPanel {
         tableModel.addRow(new Object[]{
                 request.getRequestId(),
                 request.getBookNumber(),
+                request.getStudentId(),
                 request.getStudentName(),
                 request.isGraduatingStudent() ? "Yes" : "No",
                 request.getRequestDate()
         });
     }
 
-    private void fillFieldsFromSelectedRow() {
-        int selectedRow = requestsTable.getSelectedRow();
-
-        if (selectedRow == -1) {
+    private void loadSelectedRequestIntoActionTabs() {
+        int selectedViewRow = requestsTable.getSelectedRow();
+        if (selectedViewRow == -1) {
             return;
         }
 
-        requestIdField.setText(String.valueOf(tableModel.getValueAt(selectedRow, 0)));
-        bookNumberField.setText(String.valueOf(tableModel.getValueAt(selectedRow, 1)));
-        studentNameField.setText(String.valueOf(tableModel.getValueAt(selectedRow, 2)));
-        requestDateField.setText(String.valueOf(tableModel.getValueAt(selectedRow, 4)));
+        int selectedModelRow = requestsTable.convertRowIndexToModel(selectedViewRow);
+        int requestId = Integer.parseInt(String.valueOf(tableModel.getValueAt(selectedModelRow, 0)));
+        WaitingRequest request = BookWaitingQueue.searchByRequestId(requestId);
+        if (request == null) {
+            return;
+        }
 
-        String graduatingValue = String.valueOf(tableModel.getValueAt(selectedRow, 3));
-        graduatingStudentCheckBox.setSelected(graduatingValue.equalsIgnoreCase("Yes"));
+        browseBookNumberField.setText(String.valueOf(request.getBookNumber()));
+        serveBookNumberField.setText(String.valueOf(request.getBookNumber()));
+        browseRequestInfoArea.setText(buildRequestInfo(request));
+        serveRequestInfoArea.setText(buildRequestInfo(request));
     }
 
     private String buildRequestInfo(WaitingRequest request) {
         return "Request ID: " + request.getRequestId()
                 + "\nBook Number: " + request.getBookNumber()
+                + "\nStudent ID: " + request.getStudentId()
                 + "\nStudent Name: " + request.getStudentName()
                 + "\nGraduating Student: " + (request.isGraduatingStudent() ? "Yes" : "No")
                 + "\nRequest Date: " + request.getRequestDate();
     }
 
-    private int readIntegerField(JTextField field, String fieldName) {
-        String text = field.getText().trim();
+    private void clearRequestStudentDisplay() {
+        if (addStudentNameDisplayField != null) {
+            addStudentNameDisplayField.setText("");
+        }
+        if (addGraduatingStatusDisplayField != null) {
+            addGraduatingStatusDisplayField.setText("");
+        }
+    }
 
+    private void clearAddRequestForm() {
+        addRequestIdField.setText("");
+        addBookNumberField.setText("");
+        addStudentIdField.setText("");
+        clearRequestStudentDisplay();
+        UIHelper.setDateSpinnerValue(addRequestDateSpinner, LocalDate.now());
+        requestsTable.clearSelection();
+    }
+
+    private void clearServeForm() {
+        serveBookNumberField.setText("");
+        serveRecordIdField.setText("");
+        serveBorrowDateDisplayField.setText(UIHelper.formatDate(LocalDate.now()));
+        UIHelper.setDateSpinnerValue(serveExpectedReturnDateSpinner, LocalDate.now());
+        serveRequestInfoArea.setText("Enter a Book Number and load the next request before serving it.");
+        requestsTable.clearSelection();
+    }
+
+    private GridBagConstraints createFormConstraints() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(6, 0, 6, 0);
+        return gbc;
+    }
+
+    private void addDescription(JPanel panel, GridBagConstraints gbc, int row, String htmlText) {
+        JLabel label = new JLabel("<html>" + htmlText + "</html>");
+        label.setFont(UIHelper.SMALL_FONT);
+        label.setForeground(UIHelper.SECONDARY_TEXT_COLOR);
+        addFullWidthComponent(panel, gbc, row, label);
+    }
+
+    private void addFormRow(JPanel panel, GridBagConstraints gbc, int row, String labelText, java.awt.Component component) {
+        GridBagConstraints labelConstraints = (GridBagConstraints) gbc.clone();
+        labelConstraints.gridx = 0;
+        labelConstraints.gridy = row;
+        labelConstraints.weightx = 0.35;
+        JLabel label = new JLabel(labelText);
+        label.setFont(UIHelper.NORMAL_FONT);
+        panel.add(label, labelConstraints);
+
+        GridBagConstraints componentConstraints = (GridBagConstraints) gbc.clone();
+        componentConstraints.gridx = 1;
+        componentConstraints.gridy = row;
+        componentConstraints.weightx = 0.65;
+        panel.add(component, componentConstraints);
+    }
+
+    private void addFullWidthComponent(JPanel panel, GridBagConstraints gbc, int row, java.awt.Component component) {
+        GridBagConstraints constraints = (GridBagConstraints) gbc.clone();
+        constraints.gridx = 0;
+        constraints.gridy = row;
+        constraints.gridwidth = 2;
+        constraints.weightx = 1;
+        panel.add(component, constraints);
+    }
+
+    private int readPositiveInteger(JTextField field, String fieldName) {
+        String text = field.getText().trim();
         if (text.isEmpty()) {
             throw new IllegalArgumentException(fieldName + " is required.");
         }
-
         try {
-            return Integer.parseInt(text);
+            int value = Integer.parseInt(text);
+            if (value <= 0) {
+                throw new IllegalArgumentException(fieldName + " must be greater than 0.");
+            }
+            return value;
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid number.");
         }
     }
 
-    private String readTextField(JTextField field, String fieldName) {
+    private String readRequiredText(JTextField field, String fieldName) {
         String text = field.getText().trim();
-
         if (text.isEmpty()) {
             throw new IllegalArgumentException(fieldName + " is required.");
         }
-
         return text;
     }
 
-    private String readRequiredDialogText(String message, String fieldName) {
-        String text = JOptionPane.showInputDialog(this, message);
-
-        if (text == null) {
-            return null;
-        }
-
-        text = text.trim();
-
-        if (text.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " is required.");
-        }
-
-        return text;
+    private boolean isDone(String message) {
+        return "Done .".equals(message);
     }
 
+    private static class SimpleDocumentListener implements DocumentListener {
+        private final Runnable action;
 
-    private int readPositiveIntegerText(String text, String fieldName) {
-        try {
-            int value = Integer.parseInt(text.trim());
-
-            if (value <= 0) {
-                throw new IllegalArgumentException(
-                        fieldName + " must be greater than 0."
-                );
-            }
-
-            return value;
-
-        } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException(
-                    fieldName + " must be a valid number."
-            );
+        private SimpleDocumentListener(Runnable action) {
+            this.action = action;
         }
-    }
 
-    private void clearFields() {
-        requestIdField.setText("");
-        bookNumberField.setText("");
-        studentNameField.setText("");
-        requestDateField.setText("");
-        graduatingStudentCheckBox.setSelected(false);
-        requestsTable.clearSelection();
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            action.run();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            action.run();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            action.run();
+        }
     }
 }

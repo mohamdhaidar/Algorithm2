@@ -3,16 +3,25 @@ package BackEnd;
 public class BorrowRecord {
     int recordId;
     int bookNumber;
-    String borrowerName;
+    String studentId;
+    String studentName;
     String borrowDate;
     String expectedReturnDate;
     boolean returned;
     BorrowRecord next;
 
-    public BorrowRecord(int recordId, int bookNumber, String borrowerName, String borrowDate, String expectedReturnDate) {
+    public BorrowRecord(
+            int recordId,
+            int bookNumber,
+            String studentId,
+            String studentName,
+            String borrowDate,
+            String expectedReturnDate
+    ) {
         this.recordId = recordId;
         this.bookNumber = bookNumber;
-        this.borrowerName = borrowerName;
+        this.studentId = studentId;
+        this.studentName = studentName;
         this.borrowDate = borrowDate;
         this.expectedReturnDate = expectedReturnDate;
         this.returned = false;
@@ -27,8 +36,12 @@ public class BorrowRecord {
         return bookNumber;
     }
 
-    public String getBorrowerName() {
-        return borrowerName;
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public String getStudentName() {
+        return studentName;
     }
 
     public String getBorrowDate() {
@@ -45,11 +58,12 @@ public class BorrowRecord {
 
     @Override
     public String toString() {
-        return "Record ID: " + recordId +
-                ", Book Number: " + bookNumber +
-                ", Borrower Name: " + borrowerName +
-                ", Borrow Date: " + borrowDate +
-                ", Expected Return Date: " + expectedReturnDate +
-                ", Returned: " + returned;
+        return "Record ID: " + recordId
+                + ", Book Number: " + bookNumber
+                + ", Student ID: " + studentId
+                + ", Student Name: " + studentName
+                + ", Borrow Date: " + borrowDate
+                + ", Expected Return Date: " + expectedReturnDate
+                + ", Returned: " + returned;
     }
 }

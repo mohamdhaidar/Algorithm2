@@ -215,7 +215,7 @@ public class BooksPanel extends JPanel {
 
         GridBagConstraints gbc = createFormConstraints();
         addDescription(panel, gbc, 0,
-                "Enter the number of copies to add or remove.<br>This is not the total number of copies.");
+                "Enter the number of copies to add or remove.<br>");
         addFormRow(panel, gbc, 1, "Book Number", manageBookNumberField);
         addFormRow(panel, gbc, 2, "Copy Quantity", copyQuantityField);
 
@@ -238,7 +238,7 @@ public class BooksPanel extends JPanel {
 
         GridBagConstraints gbc = createFormConstraints();
         addDescription(panel, gbc, 0,
-                "Only a book with no borrowed copies can be deleted.<br>The backend decides whether deletion is allowed.");
+                "Only a book with no borrowed copies can be deleted.<br>");
         addFormRow(panel, gbc, 1, "Book Number", deleteBookNumberField);
 
         JButton deleteButton = UIHelper.createDangerButton("Delete Book");

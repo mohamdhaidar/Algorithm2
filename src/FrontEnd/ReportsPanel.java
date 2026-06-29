@@ -64,7 +64,7 @@ public class ReportsPanel extends JPanel {
         ));
 
         reportTextArea = new JTextArea();
-        reportTextArea.setFont(UIHelper.NORMAL_FONT);
+        reportTextArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 16));
         reportTextArea.setEditable(false);
         reportTextArea.setLineWrap(true);
         reportTextArea.setWrapStyleWord(true);

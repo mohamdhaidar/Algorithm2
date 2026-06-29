@@ -24,7 +24,7 @@ public class Book {
 
     // تقرير من اجل النسخ المتاحة من كل كتاب
     public String AvailableBookCopies() {
-        return String.format("Book Number: %-10s | Author: %-20s | Total Copies: %-5d | Available Copies: %-5d",
+        return String.format("Book Number: %-8s | Author: %-10s | Total Copies: %-5d | Available Copies: %-5d",
                 getBookNumber(), getAuthor(), getCopiesNumber(), getAvailableCopies());
     }
 

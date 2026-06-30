@@ -213,10 +213,6 @@ public final class UIHelper {
         header.setReorderingAllowed(false);
     }
 
-    public static void addPadding(JComponent component, int top, int left, int bottom, int right) {
-        component.setBorder(BorderFactory.createEmptyBorder(top, left, bottom, right));
-    }
-
     public static void showSuccessMessage(Component parent, String message) {
         JOptionPane.showMessageDialog(parent, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }

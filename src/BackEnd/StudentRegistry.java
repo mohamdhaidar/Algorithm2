@@ -47,10 +47,6 @@ public final class StudentRegistry {
         return studentsByNormalizedId.get(normalizeId(studentId));
     }
 
-    public static boolean studentExists(String studentId) {
-        return findStudentById(studentId) != null;
-    }
-
     public static String updateGraduatingStatus(String studentId, boolean graduatingStudent) {
         Student student = findStudentById(studentId);
         if (student == null) {
@@ -64,10 +60,6 @@ public final class StudentRegistry {
 
     public static ArrayList<Student> getAllStudents() {
         return new ArrayList<>(studentsByNormalizedId.values());
-    }
-
-    static void resetForTests() {
-        studentsByNormalizedId.clear();
     }
 
     private static boolean isBlank(String value) {

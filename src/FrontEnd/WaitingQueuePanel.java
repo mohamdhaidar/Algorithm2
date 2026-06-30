@@ -37,7 +37,6 @@ public class WaitingQueuePanel extends JPanel {
     private JTable requestsTable;
     private DefaultTableModel tableModel;
 
-    private JTextField addRequestIdField;
     private JTextField addBookNumberField;
     private JTextField addStudentIdField;
     private JTextField addStudentNameDisplayField;
@@ -48,7 +47,6 @@ public class WaitingQueuePanel extends JPanel {
     private JTextArea browseRequestInfoArea;
 
     private JTextField serveBookNumberField;
-    private JTextField serveRecordIdField;
     private JTextField serveBorrowDateDisplayField;
     private JSpinner serveExpectedReturnDateSpinner;
     private JTextArea serveRequestInfoArea;
@@ -121,7 +119,7 @@ public class WaitingQueuePanel extends JPanel {
         titleLabel.setForeground(UIHelper.TEXT_COLOR);
 
         JLabel subtitleLabel = new JLabel(
-                "Graduating priority is always taken from the central student profile."
+                "Request IDs are created automatically, and graduating priority comes from the central student profile."
         );
         subtitleLabel.setFont(UIHelper.NORMAL_FONT);
         subtitleLabel.setForeground(UIHelper.SECONDARY_TEXT_COLOR);
@@ -152,7 +150,6 @@ public class WaitingQueuePanel extends JPanel {
         JPanel panel = UIHelper.createCardPanel();
         panel.setLayout(new GridBagLayout());
 
-        addRequestIdField = UIHelper.createTextField();
         addBookNumberField = UIHelper.createTextField();
         addStudentIdField = UIHelper.createTextField();
         addStudentNameDisplayField = UIHelper.createReadOnlyTextField();
@@ -163,22 +160,21 @@ public class WaitingQueuePanel extends JPanel {
 
         GridBagConstraints gbc = createFormConstraints();
         addDescription(panel, gbc, 0,
-                "Students must be registered first. Their name and graduating status are loaded automatically.");
-        addFormRow(panel, gbc, 1, "Request ID", addRequestIdField);
-        addFormRow(panel, gbc, 2, "Book Number", addBookNumberField);
-        addFormRow(panel, gbc, 3, "Student ID", addStudentIdField);
+                "Students must be registered first. The Request ID, name, and graduating status are handled automatically.");
+        addFormRow(panel, gbc, 1, "Book Number", addBookNumberField);
+        addFormRow(panel, gbc, 2, "Student ID", addStudentIdField);
 
         JButton loadStudentButton = UIHelper.createSecondaryButton("Load Student");
         loadStudentButton.addActionListener(e -> loadStudentForRequest());
-        addFullWidthComponent(panel, gbc, 4, loadStudentButton);
+        addFullWidthComponent(panel, gbc, 3, loadStudentButton);
 
-        addFormRow(panel, gbc, 5, "Student Name", addStudentNameDisplayField);
-        addFormRow(panel, gbc, 6, "Graduating Status", addGraduatingStatusDisplayField);
-        addFormRow(panel, gbc, 7, "Request Date", addRequestDateSpinner);
+        addFormRow(panel, gbc, 4, "Student Name", addStudentNameDisplayField);
+        addFormRow(panel, gbc, 5, "Graduating Status", addGraduatingStatusDisplayField);
+        addFormRow(panel, gbc, 6, "Request Date", addRequestDateSpinner);
 
         JButton addRequestButton = UIHelper.createPrimaryButton("Add Waiting Request");
         addRequestButton.addActionListener(e -> addWaitingRequest());
-        addFullWidthComponent(panel, gbc, 8, addRequestButton);
+        addFullWidthComponent(panel, gbc, 7, addRequestButton);
 
         return panel;
     }
@@ -214,7 +210,6 @@ public class WaitingQueuePanel extends JPanel {
         panel.setLayout(new GridBagLayout());
 
         serveBookNumberField = UIHelper.createTextField();
-        serveRecordIdField = UIHelper.createTextField();
         serveBorrowDateDisplayField = UIHelper.createReadOnlyTextField();
         serveBorrowDateDisplayField.setText(UIHelper.formatDate(LocalDate.now()));
         serveBorrowDateDisplayField.setToolTipText("Created automatically by the backend when the request is served.");
@@ -225,7 +220,7 @@ public class WaitingQueuePanel extends JPanel {
 
         GridBagConstraints gbc = createFormConstraints();
         addDescription(panel, gbc, 0,
-                "Serving a request creates a borrow record for the next priority student. Borrow Date is automatic.");
+                "Serving a request creates a borrow record with an automatic Record ID and Borrow Date for the next priority student.");
         addFormRow(panel, gbc, 1, "Book Number", serveBookNumberField);
 
         JButton loadNextButton = UIHelper.createSecondaryButton("Load Next Request");
@@ -233,13 +228,12 @@ public class WaitingQueuePanel extends JPanel {
         addFullWidthComponent(panel, gbc, 2, loadNextButton);
 
         addFullWidthComponent(panel, gbc, 3, serveRequestInfoArea);
-        addFormRow(panel, gbc, 4, "New Borrow Record ID", serveRecordIdField);
-        addFormRow(panel, gbc, 5, "Borrow Date", serveBorrowDateDisplayField);
-        addFormRow(panel, gbc, 6, "Expected Return Date", serveExpectedReturnDateSpinner);
+        addFormRow(panel, gbc, 4, "Borrow Date", serveBorrowDateDisplayField);
+        addFormRow(panel, gbc, 5, "Expected Return Date", serveExpectedReturnDateSpinner);
 
         JButton serveButton = UIHelper.createPrimaryButton("Serve Next Request");
         serveButton.addActionListener(e -> serveNextRequest());
-        addFullWidthComponent(panel, gbc, 7, serveButton);
+        addFullWidthComponent(panel, gbc, 6, serveButton);
 
         return panel;
     }
@@ -264,20 +258,18 @@ public class WaitingQueuePanel extends JPanel {
 
     private void addWaitingRequest() {
         try {
-            int requestId = readPositiveInteger(addRequestIdField, "Request ID");
             int bookNumber = readPositiveInteger(addBookNumberField, "Book Number");
             String studentId = readRequiredText(addStudentIdField, "Student ID");
             LocalDate requestDate = UIHelper.readDateSpinner(addRequestDateSpinner, "Request Date");
 
             String message = BookWaitingQueue.addRequest(
-                    requestId,
                     bookNumber,
                     studentId,
                     UIHelper.formatDate(requestDate)
             );
 
             if (isDone(message)) {
-                UIHelper.showSuccessMessage(this, "Waiting request added successfully.");
+                UIHelper.showSuccessMessage(this, "Waiting request added successfully. The Request ID was generated automatically.");
                 refreshRequestsTable();
                 clearAddRequestForm();
             } else {
@@ -340,7 +332,6 @@ public class WaitingQueuePanel extends JPanel {
     private void serveNextRequest() {
         try {
             int bookNumber = readPositiveInteger(serveBookNumberField, "Book Number");
-            int recordId = readPositiveInteger(serveRecordIdField, "New Borrow Record ID");
             LocalDate expectedReturnDate = UIHelper.readDateSpinner(
                     serveExpectedReturnDateSpinner,
                     "Expected Return Date"
@@ -366,18 +357,18 @@ public class WaitingQueuePanel extends JPanel {
 
             String message = BookWaitingQueue.serveNextRequest(
                     bookNumber,
-                    recordId,
                     UIHelper.formatDate(expectedReturnDate)
             );
 
             if (isDone(message)) {
-                BorrowRecord record = BackEnd.BorrowRecordList.searchByRecordId(recordId);
-                UIHelper.showSuccessMessage(
-                        this,
-                        "Request served successfully.\n\n"
-                                + "Student: " + nextRequest.getStudentName() + " (" + nextRequest.getStudentId() + ")\n"
-                                + "Borrow Date: " + (record == null ? UIHelper.formatDate(LocalDate.now()) : record.getBorrowDate())
-                );
+                BorrowRecord record = getMostRecentRecord();
+                String successMessage = "Request served successfully. The Record ID was generated automatically."
+                        + "\n\nStudent: " + nextRequest.getStudentName() + " (" + nextRequest.getStudentId() + ")";
+                if (record != null) {
+                    successMessage += "\nRecord ID: " + record.getRecordId()
+                            + "\nBorrow Date: " + record.getBorrowDate();
+                }
+                UIHelper.showSuccessMessage(this, successMessage);
                 refreshRequestsTable();
                 clearServeForm();
             } else {
@@ -444,7 +435,6 @@ public class WaitingQueuePanel extends JPanel {
     }
 
     private void clearAddRequestForm() {
-        addRequestIdField.setText("");
         addBookNumberField.setText("");
         addStudentIdField.setText("");
         clearRequestStudentDisplay();
@@ -454,11 +444,15 @@ public class WaitingQueuePanel extends JPanel {
 
     private void clearServeForm() {
         serveBookNumberField.setText("");
-        serveRecordIdField.setText("");
         serveBorrowDateDisplayField.setText(UIHelper.formatDate(LocalDate.now()));
         UIHelper.setDateSpinnerValue(serveExpectedReturnDateSpinner, LocalDate.now());
         serveRequestInfoArea.setText("Enter a Book Number and load the next request before serving it.");
         requestsTable.clearSelection();
+    }
+
+    private BorrowRecord getMostRecentRecord() {
+        ArrayList<BorrowRecord> records = BackEnd.BorrowRecordList.getAllRecords();
+        return records.isEmpty() ? null : records.get(records.size() - 1);
     }
 
     private GridBagConstraints createFormConstraints() {

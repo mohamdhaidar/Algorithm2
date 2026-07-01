@@ -14,9 +14,6 @@ public class BookWaitingQueue {
     private static int nextRequestId = 1;
     private static long nextArrivalOrder = 0;
 
-    /**
-     * Adds a waiting request with a system-generated, sequential Request ID.
-     */
     public static String addRequest(
             int bookNumber,
             String studentId,
@@ -121,7 +118,7 @@ public class BookWaitingQueue {
         return DONE;
     }
 
-    static void refreshPriorityForStudent(String studentId) {
+    static void refreshPriorityForStudent() {
         if (front == null) {
             return;
         }

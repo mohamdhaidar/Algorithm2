@@ -1,10 +1,5 @@
 package BackEnd;
 
-/**
- * A waiting request keeps only the Student ID. The student's name and current
- * graduating status are always read from StudentRegistry so they cannot become
- * contradictory between requests.
- */
 public class WaitingRequest {
     int requestId;
     int bookNumber;

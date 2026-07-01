@@ -13,9 +13,6 @@ public class BorrowRecordList {
     private static BorrowRecord head = null;
     private static int nextRecordId = 1;
 
-    /**
-     * Creates a borrow record with a system-generated, sequential Record ID.
-     */
     public static String borrowBookWithRecord(
             int bookNumber,
             String studentId,

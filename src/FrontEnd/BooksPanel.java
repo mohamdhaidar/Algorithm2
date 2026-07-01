@@ -348,7 +348,6 @@ public class BooksPanel extends JPanel {
             int choice = UIHelper.showConfirmMessage(
                     this,
                     "Remove " + quantity + " copy/copies from book " + bookNumber + "?\n\n"
-                            + "If this removes all available copies, the backend may delete the book."
             );
 
             if (choice != UIHelper.YES_OPTION) {

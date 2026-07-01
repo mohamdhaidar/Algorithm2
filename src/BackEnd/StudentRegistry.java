@@ -5,11 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Stores the only source of truth for student identity during the current
- * application run. Borrowing and waiting requests must use an existing
- * Student ID instead of receiving a free-text name or graduating status.
- */
+
 public final class StudentRegistry {
     private static final Map<String, Student> studentsByNormalizedId = new LinkedHashMap<>();
 

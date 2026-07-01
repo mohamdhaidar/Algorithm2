@@ -11,17 +11,13 @@ public class BorrowRecordList {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private static BorrowRecord head = null;
+    private static int nextRecordId = 1;
 
     public static String borrowBookWithRecord(
-            int recordId,
             int bookNumber,
             String studentId,
             String expectedReturnDate
     ) {
-        if (recordId <= 0) {
-            return "Record ID must be greater than 0.";
-        }
-
         if (bookNumber <= 0) {
             return "Book number must be greater than 0.";
         }
@@ -35,9 +31,6 @@ public class BorrowRecordList {
             return "Student ID was not found. Register the student first.";
         }
 
-        if (searchByRecordId(recordId) != null) {
-            return "Borrow record already exists.";
-        }
 
         LocalDate today = LocalDate.now();
         LocalDate expectedDate = parseDate(expectedReturnDate, "Expected return date");
@@ -59,7 +52,7 @@ public class BorrowRecordList {
         }
 
         BorrowRecord newRecord = new BorrowRecord(
-                recordId,
+                nextRecordId,
                 bookNumber,
                 student.getStudentId(),
                 student.getStudentName(),
@@ -67,6 +60,7 @@ public class BorrowRecordList {
                 expectedDate.format(DATE_FORMATTER)
         );
         appendRecord(newRecord);
+        nextRecordId++;
         return DONE;
     }
 
@@ -201,18 +195,6 @@ public class BorrowRecordList {
         return records;
     }
 
-    public static void printAllRecords() {
-        if (head == null) {
-            System.out.println("There are no borrow records.");
-            return;
-        }
-
-        BorrowRecord cur = head;
-        while (cur != null) {
-            System.out.println(cur);
-            cur = cur.next;
-        }
-    }
 
     private static void appendRecord(BorrowRecord newRecord) {
         if (head == null) {

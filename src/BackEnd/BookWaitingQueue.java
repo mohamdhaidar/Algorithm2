@@ -11,18 +11,14 @@ public class BookWaitingQueue {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private static WaitingRequest front = null;
+    private static int nextRequestId = 1;
     private static long nextArrivalOrder = 0;
 
     public static String addRequest(
-            int requestId,
             int bookNumber,
             String studentId,
             String requestDate
     ) {
-        if (requestId <= 0) {
-            return "Request ID must be greater than 0.";
-        }
-
         if (bookNumber <= 0) {
             return "Book Number must be greater than 0.";
         }
@@ -35,9 +31,6 @@ public class BookWaitingQueue {
             return "Request date must be a real date in yyyy-MM-dd format.";
         }
 
-        if (searchByRequestId(requestId) != null) {
-            return "Waiting request already exists.";
-        }
 
         Student student = StudentRegistry.findStudentById(studentId);
         if (student == null) {
@@ -58,13 +51,14 @@ public class BookWaitingQueue {
         }
 
         WaitingRequest newRequest = new WaitingRequest(
-                requestId,
+                nextRequestId,
                 bookNumber,
                 student.getStudentId(),
                 requestDate.trim(),
                 nextArrivalOrder++
         );
         insertByPriority(newRequest);
+        nextRequestId++;
         return DONE;
     }
 
@@ -102,7 +96,6 @@ public class BookWaitingQueue {
 
     public static String serveNextRequest(
             int bookNumber,
-            int recordId,
             String expectedReturnDate
     ) {
         String validationMessage = validateServeNextRequest(bookNumber);
@@ -110,13 +103,8 @@ public class BookWaitingQueue {
             return validationMessage;
         }
 
-        if (recordId <= 0) {
-            return "Record ID must be greater than 0.";
-        }
-
         WaitingRequest nextRequest = peekNextRequest(bookNumber);
         String borrowResult = BorrowRecordList.borrowBookWithRecord(
-                recordId,
                 bookNumber,
                 nextRequest.getStudentId(),
                 expectedReturnDate
@@ -130,7 +118,7 @@ public class BookWaitingQueue {
         return DONE;
     }
 
-    static void refreshPriorityForStudent(String studentId) {
+    static void refreshPriorityForStudent() {
         if (front == null) {
             return;
         }
@@ -186,19 +174,6 @@ public class BookWaitingQueue {
             cur = cur.next;
         }
         return requests;
-    }
-
-    public static void printAllRequests() {
-        if (front == null) {
-            System.out.println("There are no waiting requests.");
-            return;
-        }
-
-        WaitingRequest cur = front;
-        while (cur != null) {
-            System.out.println(cur);
-            cur = cur.next;
-        }
     }
 
     private static void insertByPriority(WaitingRequest newRequest) {

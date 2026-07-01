@@ -37,7 +37,6 @@ public class BorrowingPanel extends JPanel {
     private JTable recordsTable;
     private DefaultTableModel tableModel;
 
-    private JTextField borrowRecordIdField;
     private JTextField borrowBookNumberField;
     private JTextField borrowStudentIdField;
     private JTextField borrowStudentNameDisplayField;
@@ -124,7 +123,7 @@ public class BorrowingPanel extends JPanel {
         titleLabel.setForeground(UIHelper.TEXT_COLOR);
 
         JLabel subtitleLabel = new JLabel(
-                "Borrow dates are created automatically by the backend. Student details are loaded from Student ID."
+                "Record IDs and borrow dates are created automatically by the backend. Student details are loaded from Student ID."
         );
         subtitleLabel.setFont(UIHelper.NORMAL_FONT);
         subtitleLabel.setForeground(UIHelper.SECONDARY_TEXT_COLOR);
@@ -157,7 +156,6 @@ public class BorrowingPanel extends JPanel {
         JPanel panel = UIHelper.createCardPanel();
         panel.setLayout(new GridBagLayout());
 
-        borrowRecordIdField = UIHelper.createTextField();
         borrowBookNumberField = UIHelper.createTextField();
         borrowStudentIdField = UIHelper.createTextField();
         borrowStudentNameDisplayField = UIHelper.createReadOnlyTextField();
@@ -171,23 +169,22 @@ public class BorrowingPanel extends JPanel {
 
         GridBagConstraints gbc = createFormConstraints();
         addDescription(panel, gbc, 0,
-                "Enter a registered Student ID, then load the profile. Name and status cannot be edited here.");
-        addFormRow(panel, gbc, 1, "Record ID", borrowRecordIdField);
-        addFormRow(panel, gbc, 2, "Book Number", borrowBookNumberField);
-        addFormRow(panel, gbc, 3, "Student ID", borrowStudentIdField);
+                "Enter a registered Student ID, then load the profile. The Record ID, name, and status are handled automatically.");
+        addFormRow(panel, gbc, 1, "Book Number", borrowBookNumberField);
+        addFormRow(panel, gbc, 2, "Student ID", borrowStudentIdField);
 
         JButton loadStudentButton = UIHelper.createSecondaryButton("Load Student");
         loadStudentButton.addActionListener(e -> loadStudentForBorrow());
-        addFullWidthComponent(panel, gbc, 4, loadStudentButton);
+        addFullWidthComponent(panel, gbc, 3, loadStudentButton);
 
-        addFormRow(panel, gbc, 5, "Student Name", borrowStudentNameDisplayField);
-        addFormRow(panel, gbc, 6, "Graduating Status", borrowGraduatingStatusDisplayField);
-        addFormRow(panel, gbc, 7, "Borrow Date", borrowDateDisplayField);
-        addFormRow(panel, gbc, 8, "Expected Return Date", borrowExpectedReturnDateSpinner);
+        addFormRow(panel, gbc, 4, "Student Name", borrowStudentNameDisplayField);
+        addFormRow(panel, gbc, 5, "Graduating Status", borrowGraduatingStatusDisplayField);
+        addFormRow(panel, gbc, 6, "Borrow Date", borrowDateDisplayField);
+        addFormRow(panel, gbc, 7, "Expected Return Date", borrowExpectedReturnDateSpinner);
 
         JButton borrowButton = UIHelper.createPrimaryButton("Borrow Book");
         borrowButton.addActionListener(e -> borrowBook());
-        addFullWidthComponent(panel, gbc, 9, borrowButton);
+        addFullWidthComponent(panel, gbc, 8, borrowButton);
 
         return panel;
     }
@@ -296,7 +293,6 @@ public class BorrowingPanel extends JPanel {
 
     private void borrowBook() {
         try {
-            int recordId = readPositiveInteger(borrowRecordIdField, "Record ID");
             int bookNumber = readPositiveInteger(borrowBookNumberField, "Book Number");
             String studentId = readRequiredText(borrowStudentIdField, "Student ID");
             LocalDate expectedReturnDate = UIHelper.readDateSpinner(
@@ -305,20 +301,20 @@ public class BorrowingPanel extends JPanel {
             );
 
             String message = BorrowRecordList.borrowBookWithRecord(
-                    recordId,
                     bookNumber,
                     studentId,
                     UIHelper.formatDate(expectedReturnDate)
             );
 
             if (isDone(message)) {
-                BorrowRecord record = BorrowRecordList.searchByRecordId(recordId);
-                UIHelper.showSuccessMessage(
-                        this,
-                        "Book borrowed successfully.\n\n"
-                                + "Student: " + record.getStudentName() + " (" + record.getStudentId() + ")\n"
-                                + "Borrow Date: " + record.getBorrowDate()
-                );
+                BorrowRecord record = getMostRecentRecord();
+                String successMessage = "Book borrowed successfully. The Record ID was generated automatically.";
+                if (record != null) {
+                    successMessage += "\n\nRecord ID: " + record.getRecordId()
+                            + "\nStudent: " + record.getStudentName() + " (" + record.getStudentId() + ")"
+                            + "\nBorrow Date: " + record.getBorrowDate();
+                }
+                UIHelper.showSuccessMessage(this, successMessage);
                 refreshRecordsTable();
                 clearBorrowForm();
             } else {
@@ -513,13 +509,17 @@ public class BorrowingPanel extends JPanel {
     }
 
     private void clearBorrowForm() {
-        borrowRecordIdField.setText("");
         borrowBookNumberField.setText("");
         borrowStudentIdField.setText("");
         clearBorrowStudentDisplay();
         borrowDateDisplayField.setText(UIHelper.formatDate(LocalDate.now()));
         UIHelper.setDateSpinnerValue(borrowExpectedReturnDateSpinner, LocalDate.now());
         recordsTable.clearSelection();
+    }
+
+    private BorrowRecord getMostRecentRecord() {
+        ArrayList<BorrowRecord> records = BorrowRecordList.getAllRecords();
+        return records.isEmpty() ? null : records.get(records.size() - 1);
     }
 
     private GridBagConstraints createFormConstraints() {
